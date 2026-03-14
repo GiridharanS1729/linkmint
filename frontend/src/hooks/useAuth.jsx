@@ -70,11 +70,45 @@ export function AuthProvider({ children }) {
     }
   }, [clearSession]);
 
+  const finishGoogleRedirect = useCallback(async () => {
+    const hash = window.location.hash?.startsWith('#') ? window.location.hash.slice(1) : '';
+    if (!hash) return false;
+
+    const params = new URLSearchParams(hash);
+    const idToken = params.get('id_token');
+    if (!idToken) return false;
+
+    try {
+      const response = await fetch(`${API_URL}/api/auth/google`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id_token: idToken }),
+      });
+
+      if (!response.ok) {
+        return false;
+      }
+
+      const payload = await response.json();
+      applySession(payload);
+
+      // Clear token hash from URL after successful login.
+      window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+      return true;
+    } catch {
+      return false;
+    }
+  }, [applySession]);
+
   useEffect(() => {
-    refreshAuth().finally(() => {
+    finishGoogleRedirect().then((handled) => {
+      if (handled) return;
+      return refreshAuth();
+    }).finally(() => {
       setSession((prev) => ({ ...prev, loading: false }));
     });
-  }, [refreshAuth]);
+  }, [refreshAuth, finishGoogleRedirect]);
 
   useEffect(() => {
     configureApiAuth({

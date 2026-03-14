@@ -46,16 +46,21 @@ export default function AuthModal() {
     }
   }
 
-  async function handleEmailContinue({ email, adminPassword }) {
+  async function handleEmailContinue({ email, authMethod, password }) {
     setLoading(true);
     setError('');
     setEmailState(email);
 
     try {
-      if (adminPassword?.trim()) {
-        const payload = await api('/api/login', {
+      if (authMethod === 'password') {
+        if (!password?.trim()) {
+          throw new Error('Password is required');
+        }
+
+        const endpoint = tab === 'signup' ? '/api/signup' : '/api/login';
+        const payload = await api(endpoint, {
           method: 'POST',
-          body: JSON.stringify({ email, password: adminPassword }),
+          body: JSON.stringify({ email, password }),
         });
         onAuthSuccess(payload);
         return;
