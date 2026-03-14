@@ -458,24 +458,28 @@ export default async function urlRoutes(fastify) {
       const country = geo?.country || 'Unknown';
       const referrer = request.headers.referer || request.headers.referrer || null;
 
-      fastify.prisma.click.create({
-        data: {
-          urlId: urlRecord.id,
-          ip,
-          country,
-          referrer: referrer ? String(referrer) : null,
-        },
-      }).then(async () => {
+      try {
+        await fastify.prisma.click.create({
+          data: {
+            urlId: urlRecord.id,
+            ip,
+            country,
+            referrer: referrer ? String(referrer) : null,
+          },
+        });
         try {
           await fastify.redis.del(PUBLIC_STATS_CACHE_KEY);
         } catch {
           // best effort cache invalidation
         }
-      }).catch((error) => {
+      } catch (error) {
         request.log.error({ error }, 'Failed to record click');
-      });
+      }
     }
 
+    reply.header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    reply.header('Pragma', 'no-cache');
+    reply.header('Expires', '0');
     return reply.redirect(longUrl, 301);
   });
 }
