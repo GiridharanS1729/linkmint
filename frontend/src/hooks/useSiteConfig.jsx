@@ -24,12 +24,6 @@ export function SiteConfigProvider({ children }) {
   useEffect(() => {
     let mounted = true;
 
-    const applyTheme = (cfg) => {
-      const root = document.documentElement;
-      root.style.setProperty('--ui-primary-rgb', hexToRgb(cfg.primary, '#d946ef'));
-      root.style.setProperty('--ui-secondary-rgb', hexToRgb(cfg.secondary, '#3b82f6'));
-    };
-
     const fetchWithTimeout = async (url, timeoutMs = 3000) => {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -64,25 +58,20 @@ export function SiteConfigProvider({ children }) {
       };
 
       setSiteConfig(next);
-      applyTheme(next);
     };
 
     refreshSiteConfig();
 
-    const interval = setInterval(refreshSiteConfig, 15000);
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') {
-        refreshSiteConfig();
-      }
-    };
-    document.addEventListener('visibilitychange', onVisible);
-
     return () => {
       mounted = false;
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', onVisible);
     };
   }, []);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty('--ui-primary-rgb', hexToRgb(siteConfig.primary, '#d946ef'));
+    root.style.setProperty('--ui-secondary-rgb', hexToRgb(siteConfig.secondary, '#3b82f6'));
+  }, [siteConfig.primary, siteConfig.secondary]);
 
   const value = useMemo(() => ({ siteConfig, setSiteConfig }), [siteConfig]);
   return <SiteConfigContext.Provider value={value}>{children}</SiteConfigContext.Provider>;
