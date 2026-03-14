@@ -4,14 +4,17 @@ import { api } from '../api';
 import { useAuth } from '../hooks/useAuth';
 import { useSiteConfig } from '../hooks/useSiteConfig';
 
+const DEFAULT_PRIMARY = '#d946ef';
+const DEFAULT_SECONDARY = '#3b82f6';
+
 function hexToRgbString(hex, fallback) {
   const safe = /^#[0-9a-fA-F]{6}$/.test(String(hex || '')) ? String(hex) : fallback;
   return `${parseInt(safe.slice(1, 3), 16)}, ${parseInt(safe.slice(3, 5), 16)}, ${parseInt(safe.slice(5, 7), 16)}`;
 }
 
 function applyTheme(theme) {
-  document.documentElement.style.setProperty('--ui-primary-rgb', hexToRgbString(theme.primary, '#d946ef'));
-  document.documentElement.style.setProperty('--ui-secondary-rgb', hexToRgbString(theme.secondary, '#3b82f6'));
+  document.documentElement.style.setProperty('--ui-primary-rgb', hexToRgbString(theme.primary, DEFAULT_PRIMARY));
+  document.documentElement.style.setProperty('--ui-secondary-rgb', hexToRgbString(theme.secondary, DEFAULT_SECONDARY));
 }
 
 export default function Settings() {
@@ -19,8 +22,8 @@ export default function Settings() {
   const { siteConfig, setSiteConfig } = useSiteConfig();
   const [form, setForm] = useState({
     site_name: 'linkvio',
-    primary: '#d946ef',
-    secondary: '#3b82f6',
+    primary: DEFAULT_PRIMARY,
+    secondary: DEFAULT_SECONDARY,
     developer_name: 'Giridharan',
     portfolio_url: '',
     copyright_year: new Date().getFullYear(),
@@ -36,8 +39,8 @@ export default function Settings() {
       .then((data) => {
         const next = {
           site_name: data.site_name || 'linkvio',
-          primary: data.primary || '#d946ef',
-          secondary: data.secondary || '#3b82f6',
+          primary: data.primary || DEFAULT_PRIMARY,
+          secondary: data.secondary || DEFAULT_SECONDARY,
           developer_name: data.developer_name || 'Giridharan',
           portfolio_url: data.portfolio_url || '',
           copyright_year: Number(data.copyright_year || new Date().getFullYear()),
@@ -72,6 +75,14 @@ export default function Settings() {
     } catch (error) {
       setMessage(error.message);
     }
+  }
+
+  function resetDefaultColors() {
+    const next = { ...form, primary: DEFAULT_PRIMARY, secondary: DEFAULT_SECONDARY };
+    setForm(next);
+    applyTheme(next);
+    setSiteConfig((prev) => ({ ...prev, primary: DEFAULT_PRIMARY, secondary: DEFAULT_SECONDARY }));
+    setMessage('Default colors applied. Click Save Global Settings to persist.');
   }
 
   return (
@@ -111,6 +122,11 @@ export default function Settings() {
             <input type="color" value={form.secondary} disabled={!isAdmin} onChange={(e) => setForm((prev) => ({ ...prev, secondary: e.target.value }))} className="h-10 w-full rounded-md border border-white/20 bg-transparent" />
           </label>
         </div>
+        {isAdmin && (
+          <button onClick={resetDefaultColors} className="mt-3 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm text-slate-100 hover:bg-white/20">
+            Default Colors
+          </button>
+        )}
 
         {isAdmin && (
           <button onClick={saveSiteConfig} className="mt-4 rounded-xl border border-emerald-300/40 bg-emerald-500/20 px-4 py-2 text-sm text-emerald-100">
