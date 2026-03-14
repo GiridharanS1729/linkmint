@@ -2,6 +2,7 @@ import { z } from 'zod';
 import {
   getGlobalPolicies,
   getGuestPolicies,
+  isRouteAllowed,
   getUserPolicies,
   RBAC_ROUTES,
   setGlobalAccess,
@@ -17,6 +18,7 @@ import {
   setUserUrlLimit,
 } from '../rateLimitPolicy.js';
 import { addCustomOrigin, removeCustomOrigin } from '../originPolicy.js';
+import { getTheme, setTheme } from '../themePolicy.js';
 
 const setPolicySchema = z.object({
   route_key: z.string().min(3),
@@ -24,6 +26,10 @@ const setPolicySchema = z.object({
 });
 const setRateLimitSchema = z.object({
   max_per_minute: z.number().int().min(0).max(1_000_000),
+});
+const setThemeSchema = z.object({
+  primary: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+  secondary: z.string().regex(/^#[0-9a-fA-F]{6}$/),
 });
 
 function isMissingExpiresAtColumn(error) {
@@ -79,12 +85,33 @@ export default async function adminRoutes(fastify) {
     });
   });
 
-  fastify.get('/api/docs', { preHandler: [fastify.requireAuth] }, async (request) => ({
-    service: 'linkvio-api',
-    version: '1.0.0',
-    role: request.dbUser?.role || 'user',
-    endpoints: buildDocsForRole(request.dbUser?.role || 'user'),
-  }));
+  fastify.get('/api/docs', { preHandler: [fastify.requireAuth] }, async (request) => {
+    const role = request.dbUser?.role || 'user';
+    let endpoints = buildDocsForRole(role);
+
+    if (role !== 'GAdmin') {
+      try {
+        const checks = await Promise.all(endpoints.map(async (ep) => {
+          const allowed = await isRouteAllowed(fastify.redis, request.dbUser.id, `${ep.method}:${ep.path}`);
+          return allowed ? ep : null;
+        }));
+        endpoints = checks.filter(Boolean);
+      } catch {
+        // On Redis issues, return role-based docs without RBAC filtering.
+      }
+    }
+
+    return {
+      service: 'linkvio-api',
+      version: '1.0.0',
+      role,
+      endpoints,
+    };
+  });
+
+  fastify.get('/api/public/theme', async () => {
+    return getTheme(fastify.redis);
+  });
 
   fastify.get('/api/admin/docs', { preHandler: [fastify.requireAdmin] }, async () => ({
     service: 'linkvio-api',
@@ -126,6 +153,17 @@ export default async function adminRoutes(fastify) {
         role_distribution: roleGroups.map((r) => ({ role: r.role, count: r._count.role })),
       },
     };
+  });
+
+  fastify.get('/api/admin/theme', { preHandler: [fastify.requireAdmin] }, async () => getTheme(fastify.redis));
+
+  fastify.put('/api/admin/theme', { preHandler: [fastify.requireAdmin] }, async (request, reply) => {
+    const parsed = setThemeSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ message: 'Invalid theme payload', issues: parsed.error.flatten() });
+    }
+    const theme = await setTheme(fastify.redis, parsed.data);
+    return { message: 'Theme updated', theme };
   });
 
   fastify.get('/api/admin/cors', { preHandler: [fastify.requireAdmin] }, async () => {
@@ -278,4 +316,3 @@ export default async function adminRoutes(fastify) {
     return { message: 'User rate limit updated', user_id: userId, max_per_minute: parsed.data.max_per_minute };
   });
 }
-

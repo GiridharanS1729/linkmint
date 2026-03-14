@@ -44,7 +44,7 @@ async function createShortUrl(fastify, payload, request, includeExpiry = true) {
       };
     }
 
-    const exists = await fastify.prisma.url.findUnique({ where: { shortCode: customAlias } });
+    const exists = await fastify.prisma.url.findUnique({ where: { shortCode: customAlias }, select: { id: true } });
     if (exists) {
       return {
         error: {

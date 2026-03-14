@@ -4,6 +4,7 @@ import { Suspense, lazy, useEffect } from 'react';
 import { useAuth } from './hooks/useAuth';
 import AuthModal from './components/auth/AuthModal';
 import { FullPageSkeleton } from './components/ui/skeleton';
+import { API_URL } from './api';
 
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -60,6 +61,23 @@ export default function App() {
       openAuthModal();
     }
   }, [location.search, openAuthModal]);
+
+  useEffect(() => {
+    function applyTheme(theme) {
+      const parse = (hex, fallback) => {
+        const safe = /^#[0-9a-fA-F]{6}$/.test(String(hex || '')) ? String(hex) : fallback;
+        return `${parseInt(safe.slice(1, 3), 16)}, ${parseInt(safe.slice(3, 5), 16)}, ${parseInt(safe.slice(5, 7), 16)}`;
+      };
+      const root = document.documentElement;
+      root.style.setProperty('--ui-primary-rgb', parse(theme?.primary, '#d946ef'));
+      root.style.setProperty('--ui-secondary-rgb', parse(theme?.secondary, '#3b82f6'));
+    }
+
+    fetch(`${API_URL}/api/public/theme`)
+      .then((r) => r.json())
+      .then(applyTheme)
+      .catch(() => applyTheme({}));
+  }, []);
 
   return (
     <>

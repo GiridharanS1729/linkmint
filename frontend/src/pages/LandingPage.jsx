@@ -66,7 +66,7 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#020617]">
+    <div className="theme-bg relative min-h-screen overflow-hidden">
       <Navbar />
       <div className="px-4 pt-24">
         <div className="mx-auto max-w-7xl">
