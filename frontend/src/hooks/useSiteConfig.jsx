@@ -17,22 +17,45 @@ export function SiteConfigProvider({ children }) {
   });
 
   useEffect(() => {
-    Promise.all([
-      fetch(`${API_URL}/api/public/site-config`).then((r) => r.json()).catch(() => ({})),
-      fetch(`${API_URL}/api/public/stats`).then((r) => r.json()).catch(() => ({})),
-    ]).then(([cfg, stats]) => {
+    let mounted = true;
+
+    const applyTheme = (cfg) => {
+      const root = document.documentElement;
+      root.style.setProperty('--ui-primary-rgb', hexToRgb(cfg.primary, '#d946ef'));
+      root.style.setProperty('--ui-secondary-rgb', hexToRgb(cfg.secondary, '#3b82f6'));
+    };
+
+    const refreshSiteConfig = async () => {
+      const cfg = await fetch(`${API_URL}/api/public/site-config`).then((r) => r.json()).catch(() => ({}));
+      const stats = await fetch(`${API_URL}/api/public/stats`).then((r) => r.json()).catch(() => ({}));
+      if (!mounted) return;
+
       const next = {
         site_name: cfg.site_name || 'linkvio',
         primary: cfg.primary || '#d946ef',
         secondary: cfg.secondary || '#3b82f6',
         total_views: Number(stats.total_views || 0),
       };
-      setSiteConfig(next);
 
-      const root = document.documentElement;
-      root.style.setProperty('--ui-primary-rgb', hexToRgb(next.primary, '#d946ef'));
-      root.style.setProperty('--ui-secondary-rgb', hexToRgb(next.secondary, '#3b82f6'));
-    });
+      setSiteConfig(next);
+      applyTheme(next);
+    };
+
+    refreshSiteConfig();
+
+    const interval = setInterval(refreshSiteConfig, 15000);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        refreshSiteConfig();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, []);
 
   const value = useMemo(() => ({ siteConfig, setSiteConfig }), [siteConfig]);
@@ -44,4 +67,3 @@ export function useSiteConfig() {
   if (!ctx) throw new Error('useSiteConfig must be used inside SiteConfigProvider');
   return ctx;
 }
-
