@@ -1,0 +1,47 @@
+FROM node:20-alpine AS deps
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+COPY backend/package.json backend/package.json
+COPY frontend/package.json frontend/package.json
+
+RUN npm ci --ignore-scripts
+
+FROM deps AS builder
+WORKDIR /app
+COPY . .
+
+ARG VITE_API_URL=http://localhost:3000
+ARG VITE_GOOGLE_CLIENT_ID=
+ARG VITE_ADMIN_PRIVATE_KEY=
+ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
+ENV VITE_ADMIN_PRIVATE_KEY=${VITE_ADMIN_PRIVATE_KEY}
+
+# Build frontend and generate Prisma client for backend.
+RUN npm run build --workspace frontend
+RUN npm run prisma:generate --workspace backend
+
+# Keep runtime dependencies lean.
+RUN npm prune --omit=dev
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOST=0.0.0.0
+ENV FRONTEND_PORT=5173
+ENV VITE_API_URL=http://localhost:3000
+
+RUN apk add --no-cache dumb-init
+RUN npm i -g serve@14
+
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/backend ./backend
+COPY --from=builder /app/frontend/dist ./frontend/dist
+COPY --from=builder /app/package.json ./package.json
+
+EXPOSE 3000 5173
+
+CMD ["dumb-init", "sh", "-c", "node backend/src/server.js & serve -s frontend/dist -l ${FRONTEND_PORT}"]
