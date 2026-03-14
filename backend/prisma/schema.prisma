@@ -30,6 +30,7 @@ model Url {
   id          Int      @id @default(autoincrement())
   shortCode   String   @unique @map("short_code")
   longUrl     String   @map("long_url")
+  expiresAt   DateTime? @map("expires_at")
   createdBy   Int?     @map("created_by")
   createdFrom String   @map("created_from")
   createdIp   String   @map("created_ip")

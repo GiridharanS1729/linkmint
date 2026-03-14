@@ -1,0 +1,3 @@
+ALTER TABLE "urls"
+ADD COLUMN "expires_at" TIMESTAMP(3);
+

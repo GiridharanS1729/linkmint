@@ -23,6 +23,7 @@ export default function UrlTable({ rows, query, onQuery, page, totalPages, onPag
               <th className="pb-2">Short URL</th>
               <th className="pb-2">Original URL</th>
               <th className="pb-2">Clicks</th>
+              <th className="pb-2">Expiry</th>
               <th className="pb-2">Created Date</th>
               <th className="pb-2">Actions</th>
             </tr>
@@ -33,6 +34,7 @@ export default function UrlTable({ rows, query, onQuery, page, totalPages, onPag
                 <td className="py-3 font-medium text-fuchsia-200">{item.short_code}</td>
                 <td className="py-3" title={item.long_url}>{truncateUrl(item.long_url, 56)}</td>
                 <td className="py-3">{item.click_count}</td>
+                <td className="py-3">{item.expires_at ? formatDate(item.expires_at) : 'Never'}</td>
                 <td className="py-3">{formatDate(item.created_at)}</td>
                 <td className="py-3">
                   <div className="flex items-center gap-2">
@@ -45,7 +47,7 @@ export default function UrlTable({ rows, query, onQuery, page, totalPages, onPag
               </tr>
             ))}
             {rows.length === 0 && (
-              <tr><td className="py-6 text-slate-400" colSpan={5}>No URLs found.</td></tr>
+              <tr><td className="py-6 text-slate-400" colSpan={6}>No URLs found.</td></tr>
             )}
           </tbody>
         </table>

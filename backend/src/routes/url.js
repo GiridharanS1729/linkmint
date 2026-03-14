@@ -7,15 +7,25 @@ import { consumeUrlRate, getGuestUrlLimit, getUserUrlLimit } from '../rateLimitP
 const createUrlSchema = z.object({
   long_url: z.string().url(),
   custom_alias: z.string().optional(),
+  expires_at: z.string().datetime().optional(),
+  expires_in_minutes: z.number().int().positive().max(525600).optional(),
 });
 
 const updateUrlSchema = z.object({
   long_url: z.string().url().optional(),
   custom_alias: z.string().optional(),
+  expires_at: z.string().datetime().nullable().optional(),
+  expires_in_minutes: z.number().int().positive().max(525600).optional(),
 });
 
 async function createShortUrl(fastify, payload, request) {
   const { long_url: longUrl, custom_alias: customAlias } = payload;
+  let expiresAt = null;
+  if (payload.expires_at) {
+    expiresAt = new Date(payload.expires_at);
+  } else if (payload.expires_in_minutes) {
+    expiresAt = new Date(Date.now() + payload.expires_in_minutes * 60 * 1000);
+  }
 
   let shortCode;
   if (customAlias) {
@@ -53,6 +63,7 @@ async function createShortUrl(fastify, payload, request) {
     data: {
       shortCode,
       longUrl,
+      expiresAt,
       createdBy: request.dbUser?.id || null,
       createdFrom,
       createdIp,
@@ -115,9 +126,13 @@ export default async function urlRoutes(fastify) {
       }
 
       if (result.url.createdFrom === 'site') {
+        const host = request.headers.host || '';
+        const proto = request.protocol || 'https';
+        const shortUrl = host ? `${proto}://${host}/${result.url.shortCode}` : result.url.shortCode;
         return reply.code(201).send({
           code: result.url.shortCode,
-          url: result.url.longUrl,
+          url: shortUrl,
+          expires_at: result.url.expiresAt,
         });
       }
 
@@ -125,6 +140,7 @@ export default async function urlRoutes(fastify) {
         id: result.url.id,
         short_code: result.url.shortCode,
         long_url: result.url.longUrl,
+        expires_at: result.url.expiresAt,
         created_from: result.url.createdFrom,
         created_ip: result.url.createdIp,
         created_at: result.url.createdAt,
@@ -145,6 +161,7 @@ export default async function urlRoutes(fastify) {
       id: url.id,
       short_code: url.shortCode,
       long_url: url.longUrl,
+      expires_at: url.expiresAt,
       created_at: url.createdAt,
       click_count: url._count.clicks,
     }));
@@ -180,6 +197,11 @@ export default async function urlRoutes(fastify) {
 
     const data = {};
     if (parsed.data.long_url) data.longUrl = parsed.data.long_url;
+    if (Object.prototype.hasOwnProperty.call(parsed.data, 'expires_at')) {
+      data.expiresAt = parsed.data.expires_at ? new Date(parsed.data.expires_at) : null;
+    } else if (parsed.data.expires_in_minutes) {
+      data.expiresAt = new Date(Date.now() + parsed.data.expires_in_minutes * 60 * 1000);
+    }
 
     if (parsed.data.custom_alias) {
       if (!isValidAlias(parsed.data.custom_alias)) {
@@ -213,6 +235,7 @@ export default async function urlRoutes(fastify) {
       id: updated.id,
       short_code: updated.shortCode,
       long_url: updated.longUrl,
+      expires_at: updated.expiresAt,
       created_at: updated.createdAt,
     };
   });
@@ -251,6 +274,9 @@ export default async function urlRoutes(fastify) {
     if (!longUrl) {
       urlRecord = await fastify.prisma.url.findUnique({ where: { shortCode: code } });
       if (!urlRecord) return reply.code(404).send({ message: 'Short URL not found' });
+      if (urlRecord.expiresAt && urlRecord.expiresAt <= new Date()) {
+        return reply.code(410).send({ message: 'Short URL expired' });
+      }
 
       longUrl = urlRecord.longUrl;
       try {
@@ -259,7 +285,18 @@ export default async function urlRoutes(fastify) {
         request.log.warn({ error }, 'Redis cache set failed during redirect');
       }
     } else {
-      urlRecord = await fastify.prisma.url.findUnique({ where: { shortCode: code }, select: { id: true } });
+      urlRecord = await fastify.prisma.url.findUnique({
+        where: { shortCode: code },
+        select: { id: true, expiresAt: true },
+      });
+      if (urlRecord?.expiresAt && urlRecord.expiresAt <= new Date()) {
+        try {
+          await fastify.redis.del(code);
+        } catch (error) {
+          request.log.warn({ error }, 'Redis cache delete failed during expired redirect');
+        }
+        return reply.code(410).send({ message: 'Short URL expired' });
+      }
     }
 
     if (urlRecord?.id) {
