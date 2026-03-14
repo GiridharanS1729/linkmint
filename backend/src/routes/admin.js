@@ -280,7 +280,7 @@ export default async function adminRoutes(fastify) {
       return reply.code(400).send({ message: 'Invalid user id' });
     }
 
-    const user = await fastify.prisma.user.findUnique({ where: { id: userId } });
+    const user = await fastify.prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
     if (!user) return reply.code(404).send({ message: 'User not found' });
 
     await setUserAccess(fastify.redis, userId, parsed.data.route_key, parsed.data.allowed);
@@ -332,7 +332,7 @@ export default async function adminRoutes(fastify) {
       return reply.code(400).send({ message: 'Invalid user id' });
     }
 
-    const user = await fastify.prisma.user.findUnique({ where: { id: userId } });
+    const user = await fastify.prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
     if (!user) return reply.code(404).send({ message: 'User not found' });
 
     await setUserUrlLimit(fastify.redis, userId, parsed.data.max_per_minute);

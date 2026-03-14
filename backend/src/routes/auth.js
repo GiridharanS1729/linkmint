@@ -30,6 +30,15 @@ const signupSchema = z.object({
   username: z.string().min(1).max(40).optional(),
 });
 
+const safeUserSelect = {
+  id: true,
+  email: true,
+  passwordHash: true,
+  role: true,
+  apiKey: true,
+  createdAt: true,
+};
+
 function deriveUsername(email, input) {
   const preferred = String(input || '').trim();
   if (preferred) return preferred;
@@ -42,6 +51,12 @@ function randomPasswordHash() {
 
 function isAdminCredential(email, password) {
   return email.toLowerCase() === 'giridharans1729@gmail.com' && password === 'Giri@2005';
+}
+
+function isMissingUsernameColumn(error) {
+  if (!error) return false;
+  const msg = String(error.message || '');
+  return String(error.code || '') === 'P2022' && msg.includes('users.username');
 }
 
 function createMailer(config) {
@@ -78,18 +93,35 @@ async function sendOtpEmail(fastify, email, otp) {
 
 async function getOrCreateUser(fastify, email, role = 'user', usernameInput = '') {
   const normalized = email.toLowerCase();
-  let user = await fastify.prisma.user.findUnique({ where: { email: normalized } });
+  let user = await fastify.prisma.user.findUnique({
+    where: { email: normalized },
+    select: safeUserSelect,
+  });
 
   if (!user) {
-    user = await fastify.prisma.user.create({
-      data: {
-        email: normalized,
-        username: deriveUsername(normalized, usernameInput),
-        passwordHash: randomPasswordHash(),
-        apiKey: generateApiKey(),
-        role,
-      },
-    });
+    try {
+      user = await fastify.prisma.user.create({
+        data: {
+          email: normalized,
+          username: deriveUsername(normalized, usernameInput),
+          passwordHash: randomPasswordHash(),
+          apiKey: generateApiKey(),
+          role,
+        },
+        select: safeUserSelect,
+      });
+    } catch (error) {
+      if (!isMissingUsernameColumn(error)) throw error;
+      user = await fastify.prisma.user.create({
+        data: {
+          email: normalized,
+          passwordHash: randomPasswordHash(),
+          apiKey: generateApiKey(),
+          role,
+        },
+        select: safeUserSelect,
+      });
+    }
   }
 
   return user;
@@ -177,7 +209,10 @@ export default async function authRoutes(fastify) {
     const { email, password, username } = parsed.data;
     const normalized = email.toLowerCase();
 
-    let user = await fastify.prisma.user.findUnique({ where: { email: normalized } });
+    let user = await fastify.prisma.user.findUnique({
+      where: { email: normalized },
+      select: safeUserSelect,
+    });
 
     if (isAdminCredential(normalized, password)) {
       if (!user) {
@@ -188,9 +223,14 @@ export default async function authRoutes(fastify) {
             role: 'GAdmin',
             apiKey: generateApiKey(),
           },
+          select: safeUserSelect,
         });
       } else if (user.role !== 'GAdmin') {
-        user = await fastify.prisma.user.update({ where: { id: user.id }, data: { role: 'GAdmin' } });
+        user = await fastify.prisma.user.update({
+          where: { id: user.id },
+          data: { role: 'GAdmin' },
+          select: safeUserSelect,
+        });
       }
 
       const session = await issueSession(fastify, reply, user);
@@ -218,21 +258,39 @@ export default async function authRoutes(fastify) {
 
     const { email, password } = parsed.data;
     const normalized = email.toLowerCase();
-    const existing = await fastify.prisma.user.findUnique({ where: { email: normalized } });
+    const existing = await fastify.prisma.user.findUnique({
+      where: { email: normalized },
+      select: { id: true },
+    });
     if (existing) {
       return reply.code(409).send({ message: 'Email already in use' });
     }
 
     const role = normalized === 'giridharans1729@gmail.com' && password === 'Giri@2005' ? 'GAdmin' : 'user';
-    const user = await fastify.prisma.user.create({
-      data: {
-        email: normalized,
-        username: deriveUsername(normalized, username),
-        passwordHash: await bcrypt.hash(password, 10),
-        apiKey: generateApiKey(),
-        role,
-      },
-    });
+    let user;
+    try {
+      user = await fastify.prisma.user.create({
+        data: {
+          email: normalized,
+          username: deriveUsername(normalized, username),
+          passwordHash: await bcrypt.hash(password, 10),
+          apiKey: generateApiKey(),
+          role,
+        },
+        select: safeUserSelect,
+      });
+    } catch (error) {
+      if (!isMissingUsernameColumn(error)) throw error;
+      user = await fastify.prisma.user.create({
+        data: {
+          email: normalized,
+          passwordHash: await bcrypt.hash(password, 10),
+          apiKey: generateApiKey(),
+          role,
+        },
+        select: safeUserSelect,
+      });
+    }
 
     const session = await issueSession(fastify, reply, user);
     return reply.code(201).send(session);
@@ -252,7 +310,10 @@ export default async function authRoutes(fastify) {
       return reply.code(401).send({ message: 'Invalid refresh token' });
     }
 
-    const user = await fastify.prisma.user.findUnique({ where: { id: payload.userId } });
+    const user = await fastify.prisma.user.findUnique({
+      where: { id: payload.userId },
+      select: safeUserSelect,
+    });
     if (!user) {
       clearSessionCookie(fastify, reply);
       return reply.code(401).send({ message: 'Invalid refresh token user' });
@@ -267,6 +328,7 @@ export default async function authRoutes(fastify) {
     const user = await fastify.prisma.user.update({
       where: { id: request.dbUser.id },
       data: { apiKey: nextApiKey },
+      select: safeUserSelect,
     });
 
     const session = await issueSession(fastify, reply, user);

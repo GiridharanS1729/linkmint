@@ -10,6 +10,15 @@ function parseBearerToken(authHeader) {
 }
 
 export default fp(async function authPlugin(fastify) {
+  const safeUserSelect = {
+    id: true,
+    email: true,
+    passwordHash: true,
+    role: true,
+    apiKey: true,
+    createdAt: true,
+  };
+
   fastify.decorate('enforceRbac', async function enforceRbac(request, reply, userId = null, role = 'guest') {
     if (role === 'GAdmin') return;
     const routeKey = getRouteKey(request);
@@ -41,7 +50,10 @@ export default fp(async function authPlugin(fastify) {
       return reply.code(401).send({ message: 'Missing X-API-Key' });
     }
 
-    const dbUser = await fastify.prisma.user.findUnique({ where: { id: payload.userId } });
+    const dbUser = await fastify.prisma.user.findUnique({
+      where: { id: payload.userId },
+      select: safeUserSelect,
+    });
     if (!dbUser || dbUser.apiKey !== apiKey) {
       return reply.code(401).send({ message: 'Invalid API key' });
     }
