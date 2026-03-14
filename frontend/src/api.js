@@ -31,7 +31,7 @@ async function buildHeaders(path, options) {
     ...(options.headers || {}),
   };
 
-  if (!(options.body instanceof FormData) && !headers['Content-Type']) {
+  if (options.body !== undefined && !(options.body instanceof FormData) && !headers['Content-Type']) {
     headers['Content-Type'] = 'application/json';
   }
 

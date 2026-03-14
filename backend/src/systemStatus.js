@@ -11,6 +11,7 @@ export const API_CATALOG = [
   { method: 'POST', path: '/api/signup', auth: 'public', description: 'Password signup' },
   { method: 'POST', path: '/api/refresh', auth: 'public(cookie)', description: 'Refresh access token' },
   { method: 'POST', path: '/api/logout', auth: 'public(cookie)', description: 'Clear refresh cookie' },
+  { method: 'POST', path: '/api/me/apikey/regenerate', auth: 'user', description: 'Regenerate current user API key' },
   { method: 'POST', path: '/api/url', auth: 'guest/user', description: 'Create short URL' },
   { method: 'GET', path: '/api/myurls', auth: 'user', description: 'Get user URLs' },
   { method: 'GET', path: '/api/url/:id/analytics', auth: 'user/admin', description: 'Get URL analytics' },
@@ -24,6 +25,9 @@ export const API_CATALOG = [
   { method: 'PUT', path: '/api/admin/rbac/global', auth: 'admin(signature)', description: 'Set global route access' },
   { method: 'PUT', path: '/api/admin/rbac/guest', auth: 'admin(signature)', description: 'Set guest route access' },
   { method: 'PUT', path: '/api/admin/rbac/user/:id', auth: 'admin(signature)', description: 'Set per-user route access' },
+  { method: 'GET', path: '/api/admin/rate-limits', auth: 'admin(signature)', description: 'Read URL rate-limit policies' },
+  { method: 'PUT', path: '/api/admin/rate-limits/guest', auth: 'admin(signature)', description: 'Set guest URL rate-limit' },
+  { method: 'PUT', path: '/api/admin/rate-limits/user/:id', auth: 'admin(signature)', description: 'Set per-user URL rate-limit' },
   { method: 'GET', path: '/:code', auth: 'public', description: '301 redirect by short code' },
 ];
 

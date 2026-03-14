@@ -9,10 +9,20 @@ import {
   setUserAccess,
 } from '../rbac.js';
 import { API_CATALOG, collectHealth } from '../systemStatus.js';
+import {
+  DEFAULT_URL_LIMIT_PER_MINUTE,
+  getAllUserUrlLimits,
+  getGuestUrlLimit,
+  setGuestUrlLimit,
+  setUserUrlLimit,
+} from '../rateLimitPolicy.js';
 
 const setPolicySchema = z.object({
   route_key: z.string().min(3),
   allowed: z.boolean(),
+});
+const setRateLimitSchema = z.object({
+  max_per_minute: z.number().int().min(0).max(1_000_000),
 });
 
 export default async function adminRoutes(fastify) {
@@ -136,5 +146,48 @@ export default async function adminRoutes(fastify) {
 
     await setUserAccess(fastify.redis, userId, parsed.data.route_key, parsed.data.allowed);
     return { message: 'User route policy updated', user_id: userId, ...parsed.data };
+  });
+
+  fastify.get('/api/admin/rate-limits', { preHandler: [fastify.requireAdmin] }, async () => {
+    const [guest, userLimits] = await Promise.all([
+      getGuestUrlLimit(fastify.redis),
+      getAllUserUrlLimits(fastify.redis),
+    ]);
+    return {
+      defaults: {
+        user_per_minute: DEFAULT_URL_LIMIT_PER_MINUTE,
+        guest_per_minute: DEFAULT_URL_LIMIT_PER_MINUTE,
+      },
+      guest_per_minute: guest,
+      user_limits: userLimits,
+      note: 'GAdmin users are unlimited for /api/url',
+    };
+  });
+
+  fastify.put('/api/admin/rate-limits/guest', { preHandler: [fastify.requireAdmin] }, async (request, reply) => {
+    const parsed = setRateLimitSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ message: 'Invalid request body', issues: parsed.error.flatten() });
+    }
+    await setGuestUrlLimit(fastify.redis, parsed.data.max_per_minute);
+    return { message: 'Guest rate limit updated', max_per_minute: parsed.data.max_per_minute };
+  });
+
+  fastify.put('/api/admin/rate-limits/user/:id', { preHandler: [fastify.requireAdmin] }, async (request, reply) => {
+    const parsed = setRateLimitSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ message: 'Invalid request body', issues: parsed.error.flatten() });
+    }
+
+    const userId = Number(request.params.id);
+    if (!Number.isInteger(userId) || userId <= 0) {
+      return reply.code(400).send({ message: 'Invalid user id' });
+    }
+
+    const user = await fastify.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return reply.code(404).send({ message: 'User not found' });
+
+    await setUserUrlLimit(fastify.redis, userId, parsed.data.max_per_minute);
+    return { message: 'User rate limit updated', user_id: userId, max_per_minute: parsed.data.max_per_minute };
   });
 }

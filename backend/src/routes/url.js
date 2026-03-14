@@ -2,6 +2,7 @@ import geoip from 'geoip-lite';
 import { z } from 'zod';
 import { buildAliasSuggestions, generateUniqueCode, isValidAlias } from '../shortcode.js';
 import { getRequestIp } from '../network.js';
+import { consumeUrlRate, getGuestUrlLimit, getUserUrlLimit } from '../rateLimitPolicy.js';
 
 const createUrlSchema = z.object({
   long_url: z.string().url(),
@@ -70,21 +71,37 @@ async function createShortUrl(fastify, payload, request) {
 }
 
 export default async function urlRoutes(fastify) {
+  async function enforceCreateUrlRateLimit(request, reply) {
+    const role = request.dbUser?.role || request.user?.role || 'guest';
+    if (role === 'GAdmin') return;
+
+    try {
+      if (request.dbUser?.id) {
+        const userId = request.dbUser.id;
+        const limit = await getUserUrlLimit(fastify.redis, userId);
+        const key = `ratelimit:url:user:${userId}`;
+        const result = await consumeUrlRate(fastify.redis, key, limit);
+        if (!result.allowed) {
+          return reply.code(429).send({ message: 'Rate limit exceeded for this user', limit_per_minute: limit });
+        }
+        return;
+      }
+
+      const limit = await getGuestUrlLimit(fastify.redis);
+      const key = `ratelimit:url:guest:${request.ip}`;
+      const result = await consumeUrlRate(fastify.redis, key, limit);
+      if (!result.allowed) {
+        return reply.code(429).send({ message: 'Rate limit exceeded for guest requests', limit_per_minute: limit });
+      }
+    } catch (error) {
+      request.log.warn({ error }, 'Dynamic URL rate-limit check failed; allowing request');
+    }
+  }
+
   fastify.post(
     '/api/url',
     {
-      preHandler: [fastify.validateOrigin, fastify.optionalAuth],
-      config: {
-        rateLimit: {
-          max: 10,
-          timeWindow: '1 minute',
-          keyGenerator: (request) => {
-            const apiKey = request.headers['x-api-key'];
-            if (apiKey) return `user:${apiKey}`;
-            return `ip:${request.ip}`;
-          },
-        },
-      },
+      preHandler: [fastify.validateOrigin, fastify.optionalAuth, enforceCreateUrlRateLimit],
     },
     async (request, reply) => {
       const parsed = createUrlSchema.safeParse(request.body);

@@ -16,6 +16,9 @@ export const RBAC_ROUTES = [
   { key: 'PUT:/api/admin/rbac/global', method: 'PUT', path: '/api/admin/rbac/global', label: 'Admin RBAC global update' },
   { key: 'PUT:/api/admin/rbac/guest', method: 'PUT', path: '/api/admin/rbac/guest', label: 'Admin RBAC guest update' },
   { key: 'PUT:/api/admin/rbac/user/:id', method: 'PUT', path: '/api/admin/rbac/user/:id', label: 'Admin RBAC per-user update' },
+  { key: 'GET:/api/admin/rate-limits', method: 'GET', path: '/api/admin/rate-limits', label: 'Admin rate limit list' },
+  { key: 'PUT:/api/admin/rate-limits/guest', method: 'PUT', path: '/api/admin/rate-limits/guest', label: 'Admin guest rate limit update' },
+  { key: 'PUT:/api/admin/rate-limits/user/:id', method: 'PUT', path: '/api/admin/rate-limits/user/:id', label: 'Admin user rate limit update' },
 ];
 
 function boolFromString(value) {

@@ -10,27 +10,33 @@ const defaultSystem = {
 };
 const defaultDocs = { endpoints: [] };
 const defaultRbac = { routes: [], global: {}, guest: {}, user: null };
+const defaultRateLimits = { defaults: { user_per_minute: 10, guest_per_minute: 10 }, guest_per_minute: 10, user_limits: {} };
 
 export default function Admin() {
   const [data, setData] = useState(defaultAll);
   const [system, setSystem] = useState(defaultSystem);
   const [docs, setDocs] = useState(defaultDocs);
   const [rbac, setRbac] = useState(defaultRbac);
+  const [rateLimits, setRateLimits] = useState(defaultRateLimits);
   const [userFilter, setUserFilter] = useState('');
   const [urlFilter, setUrlFilter] = useState('');
   const [docFilter, setDocFilter] = useState('');
   const [selectedRoute, setSelectedRoute] = useState('POST:/api/url');
   const [selectedUserId, setSelectedUserId] = useState('');
+  const [selectedRateUserId, setSelectedRateUserId] = useState('');
+  const [guestLimitValue, setGuestLimitValue] = useState('10');
+  const [userLimitValue, setUserLimitValue] = useState('10');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [loadError, setLoadError] = useState('');
 
   async function loadAll() {
-    const [allData, systemData, docsData, rbacData] = await Promise.allSettled([
+    const [allData, systemData, docsData, rbacData, rateLimitData] = await Promise.allSettled([
       api('/api/all'),
       api('/api/admin/system'),
       api('/api/admin/docs'),
       api('/api/admin/rbac'),
+      api('/api/admin/rate-limits'),
     ]);
 
     const errors = [];
@@ -63,6 +69,14 @@ export default function Admin() {
       errors.push(`rbac: ${rbacData.reason?.message || 'failed'}`);
     }
 
+    if (rateLimitData.status === 'fulfilled') {
+      setRateLimits(rateLimitData.value || defaultRateLimits);
+      setGuestLimitValue(String(rateLimitData.value?.guest_per_minute ?? 10));
+    } else {
+      setRateLimits(defaultRateLimits);
+      errors.push(`rate-limits: ${rateLimitData.reason?.message || 'failed'}`);
+    }
+
     setLoadError(errors.length ? `Some admin APIs failed: ${errors.join(' | ')}` : '');
   }
 
@@ -72,6 +86,7 @@ export default function Admin() {
       setSystem(defaultSystem);
       setDocs(defaultDocs);
       setRbac(defaultRbac);
+      setRateLimits(defaultRateLimits);
       setLoadError(error.message || 'Failed to load admin data');
     });
   }, []);
@@ -133,6 +148,60 @@ export default function Admin() {
       const rbacData = await api(`/api/admin/rbac?user_id=${selectedUserId}`);
       setRbac(rbacData);
       setMessage(`User ${selectedUserId} policy updated: ${selectedRoute} => ${allowed ? 'allow' : 'deny'}`);
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function updateGuestRateLimit() {
+    const maxPerMinute = Number(guestLimitValue);
+    if (!Number.isFinite(maxPerMinute) || maxPerMinute < 0) {
+      setMessage('Guest limit must be a number >= 0');
+      return;
+    }
+
+    setLoading(true);
+    setMessage('');
+    try {
+      await api('/api/admin/rate-limits/guest', {
+        method: 'PUT',
+        body: JSON.stringify({ max_per_minute: Math.floor(maxPerMinute) }),
+      });
+      const next = await api('/api/admin/rate-limits');
+      setRateLimits(next);
+      setMessage(`Guest rate limit updated to ${Math.floor(maxPerMinute)} req/min`);
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function updateUserRateLimit() {
+    const userId = Number(selectedRateUserId);
+    const maxPerMinute = Number(userLimitValue);
+
+    if (!Number.isInteger(userId) || userId <= 0) {
+      setMessage('Enter a valid user ID for rate limit');
+      return;
+    }
+    if (!Number.isFinite(maxPerMinute) || maxPerMinute < 0) {
+      setMessage('User limit must be a number >= 0');
+      return;
+    }
+
+    setLoading(true);
+    setMessage('');
+    try {
+      await api(`/api/admin/rate-limits/user/${userId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ max_per_minute: Math.floor(maxPerMinute) }),
+      });
+      const next = await api('/api/admin/rate-limits');
+      setRateLimits(next);
+      setMessage(`User ${userId} rate limit updated to ${Math.floor(maxPerMinute)} req/min`);
     } catch (error) {
       setMessage(error.message);
     } finally {
@@ -203,6 +272,35 @@ export default function Admin() {
         </div>
         {message && <p className="mt-3 text-sm text-slate-200">{message}</p>}
         {loadError && <p className="mt-2 text-sm text-amber-200">{loadError}</p>}
+      </section>
+
+      <section className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+        <h2 className="mb-3 text-lg font-semibold text-white">URL Rate Limit Control</h2>
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="rounded-xl border border-white/10 bg-slate-900/40 p-3">
+            <p className="text-xs text-slate-400">Default user limit</p>
+            <p className="mt-1 text-lg font-semibold text-white">{rateLimits.defaults?.user_per_minute ?? 10} req/min</p>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-slate-900/40 p-3">
+            <p className="text-xs text-slate-400">Current guest limit</p>
+            <p className="mt-1 text-lg font-semibold text-white">{rateLimits.guest_per_minute ?? 10} req/min</p>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-slate-900/40 p-3">
+            <p className="text-xs text-slate-400">Admin API key limit</p>
+            <p className="mt-1 text-lg font-semibold text-emerald-300">Unlimited</p>
+          </div>
+        </div>
+
+        <div className="mt-3 grid gap-3 md:grid-cols-[1fr_180px]">
+          <input value={guestLimitValue} onChange={(e) => setGuestLimitValue(e.target.value)} placeholder="Guest req/min" className="h-10 rounded-xl border border-white/20 bg-slate-900/40 px-3 text-sm text-white" />
+          <button disabled={loading} onClick={updateGuestRateLimit} className="rounded-xl border border-indigo-300/40 bg-indigo-500/20 px-3 py-2 text-sm text-indigo-100">Update Guest Limit</button>
+        </div>
+
+        <div className="mt-3 grid gap-3 md:grid-cols-[180px_1fr_180px]">
+          <input value={selectedRateUserId} onChange={(e) => setSelectedRateUserId(e.target.value)} placeholder="User ID" className="h-10 rounded-xl border border-white/20 bg-slate-900/40 px-3 text-sm text-white" />
+          <input value={userLimitValue} onChange={(e) => setUserLimitValue(e.target.value)} placeholder="User req/min" className="h-10 rounded-xl border border-white/20 bg-slate-900/40 px-3 text-sm text-white" />
+          <button disabled={loading} onClick={updateUserRateLimit} className="rounded-xl border border-cyan-300/40 bg-cyan-500/20 px-3 py-2 text-sm text-cyan-100">Update User Limit</button>
+        </div>
       </section>
 
       <section className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
