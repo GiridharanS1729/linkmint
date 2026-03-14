@@ -36,6 +36,10 @@ export default function Navbar() {
           <span className="font-semibold tracking-wide">{siteConfig.site_name}</span>
         </Link>
 
+        <span className="rounded-full border border-white/20 bg-white/10 px-2 py-1 text-[11px] text-slate-200 md:hidden">
+          Views: {Number(siteConfig.total_views || 0).toLocaleString()}
+        </span>
+
         <nav className="hidden items-center gap-6 text-sm text-slate-200 md:flex">
           {links.map((link) => (
             link.href.startsWith('#') ? (
@@ -102,6 +106,7 @@ export default function Navbar() {
                 <>
                   <p className="rounded-lg px-3 py-1 text-xs text-slate-300">{auth.username || auth.email}</p>
                   <p className="rounded-lg px-3 py-1 text-[11px] text-slate-500">{auth.email}</p>
+                  <p className="rounded-lg px-3 py-1 text-xs text-slate-300">Views: {Number(siteConfig.total_views || 0).toLocaleString()}</p>
                   <p className="rounded-lg px-3 py-2 text-xs text-fuchsia-200"><KeyRound className="mr-1 inline h-3 w-3" />{auth.api_key}</p>
                   <button className="rounded-lg px-3 py-2 text-left text-slate-200 hover:bg-white/10" onClick={logout}>Logout</button>
                 </>
