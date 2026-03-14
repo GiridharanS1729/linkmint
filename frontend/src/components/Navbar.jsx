@@ -4,11 +4,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Button } from './ui/button';
 import { useAuth } from '../hooks/useAuth';
+import { useSiteConfig } from '../hooks/useSiteConfig';
 
 const links = [
   { label: 'Home', href: '/' },
   { label: 'Features', href: '#features' },
   { label: 'API', href: '#api' },
+  { label: 'Create', href: '/create' },
   { label: 'Dashboard', href: '/dashboard' },
 ];
 
@@ -17,6 +19,7 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const { auth, openAuthModal, logout } = useAuth();
+  const { siteConfig } = useSiteConfig();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -30,7 +33,7 @@ export default function Navbar() {
       <div className={`mx-auto flex max-w-7xl items-center justify-between rounded-2xl border border-white/20 px-4 transition-all duration-300 ${scrolled ? 'h-14 bg-slate-900/70 backdrop-blur-2xl' : 'h-16 bg-slate-900/45 backdrop-blur-xl'}`}>
         <Link to="/" className="flex items-center gap-2 text-white" aria-label="linkvio home">
           <Rocket className="h-5 w-5 text-fuchsia-300" />
-          <span className="font-semibold tracking-wide">linkvio</span>
+          <span className="font-semibold tracking-wide">{siteConfig.site_name}</span>
         </Link>
 
         <nav className="hidden items-center gap-6 text-sm text-slate-200 md:flex">
@@ -42,6 +45,9 @@ export default function Navbar() {
             )
           ))}
           {auth?.role === 'GAdmin' && <Link to="/all" className="hover:text-white">Admin</Link>}
+          <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs text-slate-200">
+            Views: {Number(siteConfig.total_views || 0).toLocaleString()}
+          </span>
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
@@ -51,13 +57,14 @@ export default function Navbar() {
             <div className="relative">
               <button className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm text-slate-100" onClick={() => setProfileOpen((v) => !v)} aria-label="Open profile menu">
                 <UserCircle2 className="h-4 w-4" />
-                {auth.email}
+                {auth.username || auth.email}
               </button>
               <AnimatePresence>
                 {profileOpen && (
                   <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} className="absolute right-0 mt-2 w-72 rounded-2xl border border-white/20 bg-slate-900/95 p-3 shadow-xl">
                     <p className="text-xs text-slate-400">Signed in as</p>
-                    <p className="mb-2 text-sm text-white">{auth.email}</p>
+                    <p className="mb-1 text-sm text-white">{auth.username || auth.email}</p>
+                    <p className="mb-2 text-xs text-slate-400">{auth.email}</p>
                     <p className="text-xs text-slate-400">API Key</p>
                     <p className="truncate text-xs text-fuchsia-200">{auth.api_key}</p>
                     <button className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm text-slate-100 hover:bg-white/20" onClick={logout}>
@@ -93,7 +100,8 @@ export default function Navbar() {
                 </button>
               ) : (
                 <>
-                  <p className="rounded-lg px-3 py-2 text-xs text-slate-400">{auth.email}</p>
+                  <p className="rounded-lg px-3 py-1 text-xs text-slate-300">{auth.username || auth.email}</p>
+                  <p className="rounded-lg px-3 py-1 text-[11px] text-slate-500">{auth.email}</p>
                   <p className="rounded-lg px-3 py-2 text-xs text-fuchsia-200"><KeyRound className="mr-1 inline h-3 w-3" />{auth.api_key}</p>
                   <button className="rounded-lg px-3 py-2 text-left text-slate-200 hover:bg-white/10" onClick={logout}>Logout</button>
                 </>

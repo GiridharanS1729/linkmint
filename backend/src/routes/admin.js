@@ -19,6 +19,7 @@ import {
 } from '../rateLimitPolicy.js';
 import { addCustomOrigin, removeCustomOrigin } from '../originPolicy.js';
 import { getTheme, setTheme } from '../themePolicy.js';
+import { getSiteConfig, setSiteConfig, sanitizeSiteConfig } from '../siteConfigPolicy.js';
 
 const setPolicySchema = z.object({
   route_key: z.string().min(3),
@@ -28,6 +29,11 @@ const setRateLimitSchema = z.object({
   max_per_minute: z.number().int().min(0).max(1_000_000),
 });
 const setThemeSchema = z.object({
+  primary: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+  secondary: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+});
+const setSiteConfigSchema = z.object({
+  site_name: z.string().min(1).max(40),
   primary: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   secondary: z.string().regex(/^#[0-9a-fA-F]{6}$/),
 });
@@ -113,6 +119,10 @@ export default async function adminRoutes(fastify) {
     return getTheme(fastify.redis);
   });
 
+  fastify.get('/api/public/site-config', async () => {
+    return getSiteConfig(fastify.redis);
+  });
+
   fastify.get('/api/admin/docs', { preHandler: [fastify.requireAdmin] }, async () => ({
     service: 'linkvio-api',
     version: '1.0.0',
@@ -164,6 +174,19 @@ export default async function adminRoutes(fastify) {
     }
     const theme = await setTheme(fastify.redis, parsed.data);
     return { message: 'Theme updated', theme };
+  });
+
+  fastify.get('/api/admin/site-config', { preHandler: [fastify.requireAdmin] }, async () => {
+    return getSiteConfig(fastify.redis);
+  });
+
+  fastify.put('/api/admin/site-config', { preHandler: [fastify.requireAdmin] }, async (request, reply) => {
+    const parsed = setSiteConfigSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ message: 'Invalid site config payload', issues: parsed.error.flatten() });
+    }
+    const config = await setSiteConfig(fastify.redis, sanitizeSiteConfig(parsed.data));
+    return { message: 'Site config updated', config };
   });
 
   fastify.get('/api/admin/cors', { preHandler: [fastify.requireAdmin] }, async () => {

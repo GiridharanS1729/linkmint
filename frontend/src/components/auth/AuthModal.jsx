@@ -30,7 +30,7 @@ export default function AuthModal() {
     }
   }
 
-  async function handleEmailContinue({ email, authMethod, password }) {
+  async function handleEmailContinue({ email, authMethod, password, username }) {
     setLoading(true);
     setError('');
     setEmailState(email);
@@ -42,9 +42,11 @@ export default function AuthModal() {
         }
 
         const endpoint = tab === 'signup' ? '/api/signup' : '/api/login';
+        const body = { email, password };
+        if (tab === 'signup' && username?.trim()) body.username = username.trim();
         const payload = await api(endpoint, {
           method: 'POST',
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify(body),
         });
         onAuthSuccess(payload);
         return;

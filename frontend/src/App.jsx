@@ -4,7 +4,6 @@ import { Suspense, lazy, useEffect } from 'react';
 import { useAuth } from './hooks/useAuth';
 import AuthModal from './components/auth/AuthModal';
 import { FullPageSkeleton } from './components/ui/skeleton';
-import { API_URL } from './api';
 
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -13,6 +12,7 @@ const Admin = lazy(() => import('./pages/Admin'));
 const ApiDocs = lazy(() => import('./pages/ApiDocs'));
 const ApiKey = lazy(() => import('./pages/ApiKey'));
 const Settings = lazy(() => import('./pages/Settings'));
+const CreateUrl = lazy(() => import('./pages/CreateUrl'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 function GoogleCallbackPage() {
@@ -62,23 +62,6 @@ export default function App() {
     }
   }, [location.search, openAuthModal]);
 
-  useEffect(() => {
-    function applyTheme(theme) {
-      const parse = (hex, fallback) => {
-        const safe = /^#[0-9a-fA-F]{6}$/.test(String(hex || '')) ? String(hex) : fallback;
-        return `${parseInt(safe.slice(1, 3), 16)}, ${parseInt(safe.slice(3, 5), 16)}, ${parseInt(safe.slice(5, 7), 16)}`;
-      };
-      const root = document.documentElement;
-      root.style.setProperty('--ui-primary-rgb', parse(theme?.primary, '#d946ef'));
-      root.style.setProperty('--ui-secondary-rgb', parse(theme?.secondary, '#3b82f6'));
-    }
-
-    fetch(`${API_URL}/api/public/theme`)
-      .then((r) => r.json())
-      .then(applyTheme)
-      .catch(() => applyTheme({}));
-  }, []);
-
   return (
     <>
       <Suspense fallback={<FullPageSkeleton />}>
@@ -87,6 +70,7 @@ export default function App() {
             <Route path="/" element={<Transition><LandingPage /></Transition>} />
             <Route path="/login" element={<Navigate to="/?auth=1" replace />} />
             <Route path="/signup" element={<Navigate to="/?auth=1" replace />} />
+            <Route path="/create" element={<Transition><CreateUrl /></Transition>} />
             <Route path="/api/auth/google/callback" element={<Transition><GoogleCallbackPage /></Transition>} />
             <Route path="/dashboard" element={<ProtectedRoute><Transition><Dashboard /></Transition></ProtectedRoute>} />
             <Route path="/analytics" element={<ProtectedRoute><Transition><Analytics /></Transition></ProtectedRoute>} />

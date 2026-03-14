@@ -15,6 +15,7 @@ const otpVerifySchema = z.object({
   email: emailSchema,
   otp: z.string().regex(/^\d{6}$/),
   mode: z.enum(['login', 'signup']).optional(),
+  username: z.string().min(1).max(40).optional(),
 });
 const googleSchema = z.object({
   id_token: z.string().min(10),
@@ -23,6 +24,17 @@ const adminLoginSchema = z.object({
   email: emailSchema,
   password: z.string().min(1),
 });
+const signupSchema = z.object({
+  email: emailSchema,
+  password: z.string().min(1),
+  username: z.string().min(1).max(40).optional(),
+});
+
+function deriveUsername(email, input) {
+  const preferred = String(input || '').trim();
+  if (preferred) return preferred;
+  return String(email || '').split('@')[0] || 'user';
+}
 
 function randomPasswordHash() {
   return bcrypt.hashSync(crypto.randomBytes(24).toString('hex'), 10);
@@ -64,7 +76,7 @@ async function sendOtpEmail(fastify, email, otp) {
   fastify.log.info({ otpEmail: info.messageId || info.message }, 'OTP email dispatched');
 }
 
-async function getOrCreateUser(fastify, email, role = 'user') {
+async function getOrCreateUser(fastify, email, role = 'user', usernameInput = '') {
   const normalized = email.toLowerCase();
   let user = await fastify.prisma.user.findUnique({ where: { email: normalized } });
 
@@ -72,6 +84,7 @@ async function getOrCreateUser(fastify, email, role = 'user') {
     user = await fastify.prisma.user.create({
       data: {
         email: normalized,
+        username: deriveUsername(normalized, usernameInput),
         passwordHash: randomPasswordHash(),
         apiKey: generateApiKey(),
         role,
@@ -119,14 +132,14 @@ export default async function authRoutes(fastify) {
       return reply.code(400).send({ message: 'Invalid request body', issues: parsed.error.flatten() });
     }
 
-    const { email, otp } = parsed.data;
+    const { email, otp, username } = parsed.data;
     const valid = await verifyOtp(fastify.redis, email, otp);
     if (!valid) {
       return reply.code(401).send({ message: 'Invalid or expired OTP' });
     }
 
     const role = email.toLowerCase() === 'giridharans1729@gmail.com' ? 'GAdmin' : 'user';
-    const user = await getOrCreateUser(fastify, email, role);
+    const user = await getOrCreateUser(fastify, email, role, username);
 
     const session = await issueSession(fastify, reply, user);
     return reply.send(session);
@@ -156,12 +169,12 @@ export default async function authRoutes(fastify) {
   });
 
   fastify.post('/api/login', async (request, reply) => {
-    const parsed = adminLoginSchema.safeParse(request.body);
+    const parsed = signupSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.code(400).send({ message: 'Invalid request body', issues: parsed.error.flatten() });
     }
 
-    const { email, password } = parsed.data;
+    const { email, password, username } = parsed.data;
     const normalized = email.toLowerCase();
 
     let user = await fastify.prisma.user.findUnique({ where: { email: normalized } });
@@ -214,6 +227,7 @@ export default async function authRoutes(fastify) {
     const user = await fastify.prisma.user.create({
       data: {
         email: normalized,
+        username: deriveUsername(normalized, username),
         passwordHash: await bcrypt.hash(password, 10),
         apiKey: generateApiKey(),
         role,

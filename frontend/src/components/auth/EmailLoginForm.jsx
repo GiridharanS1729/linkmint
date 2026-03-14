@@ -7,10 +7,11 @@ export default function EmailLoginForm({ mode, onContinue, loading }) {
   const [email, setEmail] = useState('');
   const [authMethod, setAuthMethod] = useState('otp');
   const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
 
   function submit(event) {
     event.preventDefault();
-    onContinue({ email, authMethod, password });
+    onContinue({ email, authMethod, password, username });
   }
 
   return (
@@ -47,6 +48,18 @@ export default function EmailLoginForm({ mode, onContinue, loading }) {
 
       {authMethod === 'password' && (
         <div className="space-y-2">
+          {mode === 'signup' && (
+            <>
+              <label className="block text-xs text-slate-400">Username (optional)</label>
+              <Input
+                type="text"
+                placeholder="yourname"
+                value={username}
+                maxLength={40}
+                onChange={(event) => setUsername(event.target.value)}
+              />
+            </>
+          )}
           <label className="block text-xs text-slate-400">Password</label>
           <div className="relative">
             <KeyRound className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-400" />

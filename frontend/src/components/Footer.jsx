@@ -1,18 +1,20 @@
 import { Link } from 'react-router-dom';
+import { useSiteConfig } from '../hooks/useSiteConfig';
 
 export default function Footer() {
+  const { siteConfig } = useSiteConfig();
   return (
     <footer className="mt-20 border-t border-white/15 bg-slate-950/70 px-4 py-10">
       <div className="mx-auto grid max-w-7xl gap-8 sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <h4 className="text-lg font-semibold text-white">linkvio</h4>
+          <h4 className="text-lg font-semibold text-white">{siteConfig.site_name}</h4>
           <p className="mt-2 text-sm text-slate-300">Premium URL infrastructure with smooth analytics and secure API workflows.</p>
         </div>
         <div>
           <h5 className="text-sm font-semibold uppercase tracking-wide text-slate-200">Product</h5>
           <ul className="mt-3 space-y-2 text-sm text-slate-300">
             <li><a href="#features" className="hover:text-white">Features</a></li>
-            <li><a href="#api" className="hover:text-white">API docs</a></li>
+            <li><Link to="/api/docs" className="hover:text-white">API docs</Link></li>
             <li><Link to="/dashboard" className="hover:text-white">Dashboard</Link></li>
           </ul>
         </div>

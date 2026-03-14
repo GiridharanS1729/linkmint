@@ -29,6 +29,7 @@ export async function issueSession(fastify, reply, user) {
     user: {
       id: user.id,
       email: user.email,
+      username: user.username || user.email.split('@')[0],
       role: user.role,
       api_key: user.apiKey,
     },

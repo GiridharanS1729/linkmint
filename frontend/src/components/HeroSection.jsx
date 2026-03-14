@@ -76,7 +76,7 @@ export default function HeroSection() {
             Linkvio combines instant redirects, secure APIs, and analytics in one polished URL platform.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <a href="#shorten"><Button>Create Short URL</Button></a>
+            <a href="/create"><Button>Create Short URL</Button></a>
             <a href="/dashboard"><Button variant="secondary">View Dashboard <ArrowRight className="ml-2 h-4 w-4" /></Button></a>
           </div>
         </motion.div>

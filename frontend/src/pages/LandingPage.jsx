@@ -68,13 +68,6 @@ export default function LandingPage() {
   return (
     <div className="theme-bg relative min-h-screen overflow-hidden">
       <Navbar />
-      <div className="px-4 pt-24">
-        <div className="mx-auto max-w-7xl">
-          <div className="inline-flex rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs text-slate-200 backdrop-blur">
-            Total views: {(Number(stats?.total_views || 0)).toLocaleString()}
-          </div>
-        </div>
-      </div>
       <HeroSection />
       <div className="h-px bg-gradient-to-r from-transparent via-fuchsia-400/60 to-transparent" />
       <Suspense fallback={<div className="py-20 text-center text-slate-300">Loading features...</div>}>
