@@ -103,8 +103,7 @@ export default fp(async function authPlugin(fastify) {
       return reply.code(403).send({ message: 'Admin access required' });
     }
 
-    const path = request.url.split('?')[0];
-    const signatureRequired = request.method !== 'GET' || path.startsWith('/api/admin');
+    const signatureRequired = request.method !== 'GET';
     if (signatureRequired) {
       await fastify.verifyAdminSignature(request, reply);
     }

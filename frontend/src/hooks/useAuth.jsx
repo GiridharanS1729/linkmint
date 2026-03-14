@@ -134,11 +134,12 @@ export function AuthProvider({ children }) {
       getAdminHeaders: async (path) => {
         if (session.user?.role !== 'GAdmin') return {};
 
-        const key = import.meta.env.VITE_ADMIN_PRIVATE_KEY;
+        const key = String(import.meta.env.VITE_ADMIN_PRIVATE_KEY || '').trim();
         if (!key) return {};
 
+        const signingPath = String(path || '').split('?')[0];
         const timestamp = String(Date.now());
-        const signature = await hmacSha256Hex(`${timestamp}${path}`, key);
+        const signature = await hmacSha256Hex(`${timestamp}${signingPath}`, key);
 
         return {
           'X-Timestamp': timestamp,

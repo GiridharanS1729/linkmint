@@ -248,6 +248,17 @@ export default async function authRoutes(fastify) {
     return reply.send(session);
   });
 
+  fastify.post('/api/me/apikey/regenerate', { preHandler: [fastify.requireAuth] }, async (request, reply) => {
+    const nextApiKey = generateApiKey();
+    const user = await fastify.prisma.user.update({
+      where: { id: request.dbUser.id },
+      data: { apiKey: nextApiKey },
+    });
+
+    const session = await issueSession(fastify, reply, user);
+    return reply.send(session);
+  });
+
   fastify.post('/api/logout', { preHandler: [fastify.optionalAuth] }, async (request, reply) => {
     if (request.dbUser?.id) {
       try {
