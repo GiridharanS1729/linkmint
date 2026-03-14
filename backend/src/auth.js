@@ -67,10 +67,7 @@ export default fp(async function authPlugin(fastify) {
     const origin = request.headers.origin;
     if (!origin) return;
 
-    const allowed = String(fastify.config.frontendOrigin || '')
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean);
+    const allowed = await fastify.getAllowedOrigins();
 
     if (allowed.length > 0 && !allowed.includes(origin)) {
       return reply.code(403).send({ message: 'Origin not allowed' });

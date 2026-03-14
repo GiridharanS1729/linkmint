@@ -7,6 +7,7 @@ const items = [
   { label: 'Create URL', icon: Link2, to: '/dashboard' },
   { label: 'My URLs', icon: LayoutDashboard, to: '/dashboard#urls' },
   { label: 'Analytics', icon: BarChart3, to: '/analytics' },
+  { label: 'API Docs', icon: LayoutDashboard, to: '/api/docs' },
   { label: 'API Key', icon: KeyRound, to: '/api-key' },
   { label: 'Settings', icon: Settings, to: '/settings' },
 ];

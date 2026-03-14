@@ -8,21 +8,21 @@ const defaultSystem = {
   health: { dependencies: {}, apis: [] },
   metrics: { users_total: 0, urls_total: 0, clicks_total: 0, logged_in_users_estimate: 0, not_logged_in_users_estimate: 0, role_distribution: [] },
 };
-const defaultDocs = { endpoints: [] };
 const defaultRbac = { routes: [], global: {}, guest: {}, user: null };
 const defaultRateLimits = { defaults: { user_per_minute: 10, guest_per_minute: 10 }, guest_per_minute: 10, user_limits: {} };
+const defaultCors = { allowed_origins: [] };
 
 export default function Admin() {
   const [data, setData] = useState(defaultAll);
   const [system, setSystem] = useState(defaultSystem);
-  const [docs, setDocs] = useState(defaultDocs);
   const [rbac, setRbac] = useState(defaultRbac);
   const [rateLimits, setRateLimits] = useState(defaultRateLimits);
+  const [corsData, setCorsData] = useState(defaultCors);
   const [userFilter, setUserFilter] = useState('');
   const [urlFilter, setUrlFilter] = useState('');
-  const [docFilter, setDocFilter] = useState('');
   const [selectedRoute, setSelectedRoute] = useState('POST:/api/url');
   const [selectedUserId, setSelectedUserId] = useState('');
+  const [newOrigin, setNewOrigin] = useState('');
   const [selectedRateUserId, setSelectedRateUserId] = useState('');
   const [guestLimitValue, setGuestLimitValue] = useState('10');
   const [userLimitValue, setUserLimitValue] = useState('10');
@@ -31,12 +31,12 @@ export default function Admin() {
   const [loadError, setLoadError] = useState('');
 
   async function loadAll() {
-    const [allData, systemData, docsData, rbacData, rateLimitData] = await Promise.allSettled([
+    const [allData, systemData, rbacData, rateLimitData, corsResult] = await Promise.allSettled([
       api('/api/all'),
       api('/api/admin/system'),
-      api('/api/admin/docs'),
       api('/api/admin/rbac'),
       api('/api/admin/rate-limits'),
+      api('/api/admin/cors'),
     ]);
 
     const errors = [];
@@ -55,13 +55,6 @@ export default function Admin() {
       errors.push(`system: ${systemData.reason?.message || 'failed'}`);
     }
 
-    if (docsData.status === 'fulfilled') {
-      setDocs(docsData.value || defaultDocs);
-    } else {
-      setDocs(defaultDocs);
-      errors.push(`docs: ${docsData.reason?.message || 'failed'}`);
-    }
-
     if (rbacData.status === 'fulfilled') {
       setRbac(rbacData.value || defaultRbac);
     } else {
@@ -77,6 +70,13 @@ export default function Admin() {
       errors.push(`rate-limits: ${rateLimitData.reason?.message || 'failed'}`);
     }
 
+    if (corsResult.status === 'fulfilled') {
+      setCorsData(corsResult.value || defaultCors);
+    } else {
+      setCorsData(defaultCors);
+      errors.push(`cors: ${corsResult.reason?.message || 'failed'}`);
+    }
+
     setLoadError(errors.length ? `Some admin APIs failed: ${errors.join(' | ')}` : '');
   }
 
@@ -84,16 +84,15 @@ export default function Admin() {
     loadAll().catch((error) => {
       setData(defaultAll);
       setSystem(defaultSystem);
-      setDocs(defaultDocs);
       setRbac(defaultRbac);
       setRateLimits(defaultRateLimits);
+      setCorsData(defaultCors);
       setLoadError(error.message || 'Failed to load admin data');
     });
   }, []);
 
   const users = useMemo(() => data.users.filter((u) => `${u.email} ${u.role}`.toLowerCase().includes(userFilter.toLowerCase())), [data.users, userFilter]);
   const urls = useMemo(() => data.urls.filter((u) => `${u.shortCode} ${u.longUrl} ${u.user?.email || ''}`.toLowerCase().includes(urlFilter.toLowerCase())), [data.urls, urlFilter]);
-  const endpoints = useMemo(() => docs.endpoints.filter((e) => `${e.method} ${e.path} ${e.auth} ${e.description}`.toLowerCase().includes(docFilter.toLowerCase())), [docs.endpoints, docFilter]);
   const globalClicks = urls.reduce((sum, item) => sum + (item._count?.clicks || 0), 0);
 
   async function setGlobalPolicy(allowed) {
@@ -209,6 +208,39 @@ export default function Admin() {
     }
   }
 
+  async function addOrigin() {
+    if (!newOrigin.trim()) {
+      setMessage('Enter an origin URL');
+      return;
+    }
+    setLoading(true);
+    setMessage('');
+    try {
+      await api('/api/admin/cors', { method: 'POST', body: JSON.stringify({ origin: newOrigin.trim() }) });
+      setCorsData(await api('/api/admin/cors'));
+      setNewOrigin('');
+      setMessage('Origin added');
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function removeOrigin(origin) {
+    setLoading(true);
+    setMessage('');
+    try {
+      await api('/api/admin/cors', { method: 'DELETE', body: JSON.stringify({ origin }) });
+      setCorsData(await api('/api/admin/cors'));
+      setMessage('Origin removed');
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <DashboardLayout title="Admin Console">
       <div className="grid gap-4 md:grid-cols-5">
@@ -238,17 +270,18 @@ export default function Admin() {
       </section>
 
       <section className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-white">API Catalog (Swagger Style)</h2>
-          <input value={docFilter} onChange={(e) => setDocFilter(e.target.value)} placeholder="Filter API docs" className="h-10 rounded-xl border border-white/20 bg-slate-900/40 px-3 text-sm text-white" />
+        <h2 className="mb-3 text-lg font-semibold text-white">CORS Allowed Origins</h2>
+        <div className="grid gap-3 md:grid-cols-[1fr_170px]">
+          <input value={newOrigin} onChange={(e) => setNewOrigin(e.target.value)} placeholder="https://new-domain.com" className="h-10 rounded-xl border border-white/20 bg-slate-900/40 px-3 text-sm text-white" />
+          <button disabled={loading} onClick={addOrigin} className="rounded-xl border border-emerald-300/40 bg-emerald-500/20 px-3 py-2 text-sm text-emerald-100">Add Origin</button>
         </div>
-        <div className="overflow-auto">
-          <table className="min-w-full text-sm text-slate-200">
-            <thead><tr className="text-left text-slate-400"><th className="pb-2">Method</th><th className="pb-2">Path</th><th className="pb-2">Auth</th><th className="pb-2">Description</th></tr></thead>
-            <tbody>
-              {endpoints.map((e) => <tr key={`${e.method}-${e.path}`} className="border-t border-white/10"><td className="py-2">{e.method}</td><td className="py-2 font-mono">{e.path}</td><td className="py-2">{e.auth}</td><td className="py-2">{e.description}</td></tr>)}
-            </tbody>
-          </table>
+        <div className="mt-3 space-y-2">
+          {(corsData.allowed_origins || []).map((origin) => (
+            <div key={origin} className="flex items-center justify-between rounded-xl border border-white/10 bg-slate-900/40 px-3 py-2 text-sm text-slate-200">
+              <span className="truncate">{origin}</span>
+              <button disabled={loading} onClick={() => removeOrigin(origin)} className="rounded-lg border border-rose-300/40 bg-rose-500/20 px-2 py-1 text-xs text-rose-100">Remove</button>
+            </div>
+          ))}
         </div>
       </section>
 

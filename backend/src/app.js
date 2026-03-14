@@ -12,6 +12,7 @@ import authRoutes from './routes/auth.js';
 import urlRoutes from './routes/url.js';
 import adminRoutes from './routes/admin.js';
 import { collectHealth } from './systemStatus.js';
+import { getAllowedOrigins } from './originPolicy.js';
 
 export async function createApp() {
   const app = Fastify({ logger: true });
@@ -19,6 +20,7 @@ export async function createApp() {
   app.decorate('prisma', prisma);
   app.decorate('redis', redis);
   app.decorate('config', config);
+  app.decorate('getAllowedOrigins', async () => getAllowedOrigins(config, redis));
 
   await app.register(helmet, {
     contentSecurityPolicy: false,
@@ -27,7 +29,12 @@ export async function createApp() {
   await app.register(cookie);
 
   await app.register(cors, {
-    origin: config.frontendOrigin.split(',').map((item) => item.trim()),
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true);
+      app.getAllowedOrigins()
+        .then((allowedOrigins) => cb(null, allowedOrigins.includes(origin)))
+        .catch(() => cb(null, false));
+    },
     credentials: true,
   });
 

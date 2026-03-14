@@ -8,7 +8,7 @@ import {
   setGuestAccess,
   setUserAccess,
 } from '../rbac.js';
-import { API_CATALOG, collectHealth } from '../systemStatus.js';
+import { collectHealth, buildDocsForRole } from '../systemStatus.js';
 import {
   DEFAULT_URL_LIMIT_PER_MINUTE,
   getAllUserUrlLimits,
@@ -16,6 +16,7 @@ import {
   setGuestUrlLimit,
   setUserUrlLimit,
 } from '../rateLimitPolicy.js';
+import { addCustomOrigin, removeCustomOrigin } from '../originPolicy.js';
 
 const setPolicySchema = z.object({
   route_key: z.string().min(3),
@@ -25,22 +26,49 @@ const setRateLimitSchema = z.object({
   max_per_minute: z.number().int().min(0).max(1_000_000),
 });
 
+function isMissingExpiresAtColumn(error) {
+  if (!error) return false;
+  const msg = String(error.message || '');
+  return String(error.code || '') === 'P2022' && msg.includes('expires_at');
+}
+
 export default async function adminRoutes(fastify) {
   fastify.get('/api/all', { preHandler: [fastify.requireAdmin] }, async () => {
-    const [users, urls] = await Promise.all([
-      fastify.prisma.user.findMany({
+    const usersPromise = fastify.prisma.user.findMany({
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, email: true, role: true, apiKey: true, createdAt: true },
+    });
+
+    let urls;
+    try {
+      urls = await fastify.prisma.url.findMany({
         orderBy: { createdAt: 'desc' },
-        select: { id: true, email: true, role: true, apiKey: true, createdAt: true },
-      }),
-      fastify.prisma.url.findMany({
-        orderBy: { createdAt: 'desc' },
-        include: {
+        select: {
+          id: true,
+          shortCode: true,
+          longUrl: true,
+          expiresAt: true,
+          createdAt: true,
           user: { select: { id: true, email: true, role: true } },
           _count: { select: { clicks: true } },
         },
-      }),
-    ]);
+      });
+    } catch (error) {
+      if (!isMissingExpiresAtColumn(error)) throw error;
+      urls = await fastify.prisma.url.findMany({
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          shortCode: true,
+          longUrl: true,
+          createdAt: true,
+          user: { select: { id: true, email: true, role: true } },
+          _count: { select: { clicks: true } },
+        },
+      });
+    }
 
+    const users = await usersPromise;
     return { users, urls };
   });
 
@@ -50,6 +78,25 @@ export default async function adminRoutes(fastify) {
       select: { id: true, email: true, role: true, apiKey: true, createdAt: true },
     });
   });
+
+  fastify.get('/api/docs', { preHandler: [fastify.requireAuth] }, async (request) => ({
+    service: 'linkvio-api',
+    version: '1.0.0',
+    role: request.dbUser?.role || 'user',
+    endpoints: buildDocsForRole(request.dbUser?.role || 'user'),
+  }));
+
+  fastify.get('/api/admin/docs', { preHandler: [fastify.requireAdmin] }, async () => ({
+    service: 'linkvio-api',
+    version: '1.0.0',
+    role: 'GAdmin',
+    endpoints: buildDocsForRole('GAdmin'),
+    security: {
+      user: ['Authorization: Bearer <access_token>', 'X-API-Key: <api_key>'],
+      admin: ['X-Timestamp', 'X-Admin-Signature'],
+      note: 'Admin signature = HMAC_SHA256(timestamp + request_path, ADMIN_PRIVATE_KEY)',
+    },
+  }));
 
   fastify.get('/api/admin/system', { preHandler: [fastify.requireAdmin] }, async () => {
     const [health, userStats, urlStats, clickStats, roleGroups] = await Promise.all([
@@ -81,16 +128,38 @@ export default async function adminRoutes(fastify) {
     };
   });
 
-  fastify.get('/api/admin/docs', { preHandler: [fastify.requireAdmin] }, async () => ({
-    service: 'linkvio-api',
-    version: '1.0.0',
-    endpoints: API_CATALOG,
-    security: {
-      user: ['Authorization: Bearer <access_token>', 'X-API-Key: <api_key>'],
-      admin: ['X-Timestamp', 'X-Admin-Signature'],
-      note: 'Admin signature = HMAC_SHA256(timestamp + request_path, ADMIN_PRIVATE_KEY)',
-    },
-  }));
+  fastify.get('/api/admin/cors', { preHandler: [fastify.requireAdmin] }, async () => {
+    const allowed_origins = await fastify.getAllowedOrigins();
+    return { allowed_origins };
+  });
+
+  fastify.post('/api/admin/cors', { preHandler: [fastify.requireAdmin] }, async (request, reply) => {
+    const origin = request.body?.origin;
+    if (!origin || typeof origin !== 'string') {
+      return reply.code(400).send({ message: 'origin is required' });
+    }
+    try {
+      const result = await addCustomOrigin(fastify.redis, origin);
+      if (!result.ok) return reply.code(503).send({ message: 'Redis unavailable. Try again.' });
+      return { message: 'Origin added', origin: result.origin };
+    } catch (error) {
+      return reply.code(400).send({ message: error.message || 'Invalid origin' });
+    }
+  });
+
+  fastify.delete('/api/admin/cors', { preHandler: [fastify.requireAdmin] }, async (request, reply) => {
+    const origin = request.body?.origin;
+    if (!origin || typeof origin !== 'string') {
+      return reply.code(400).send({ message: 'origin is required' });
+    }
+    try {
+      const result = await removeCustomOrigin(fastify.redis, origin);
+      if (!result.ok) return reply.code(503).send({ message: 'Redis unavailable. Try again.' });
+      return { message: 'Origin removed', origin: result.origin };
+    } catch (error) {
+      return reply.code(400).send({ message: error.message || 'Invalid origin' });
+    }
+  });
 
   fastify.get('/api/admin/rbac', { preHandler: [fastify.requireAdmin] }, async (request, reply) => {
     const userId = request.query?.user_id ? Number(request.query.user_id) : null;
@@ -98,17 +167,26 @@ export default async function adminRoutes(fastify) {
       return reply.code(400).send({ message: 'Invalid user_id query parameter' });
     }
 
-    const [global, guest, userPolicies] = await Promise.all([
-      getGlobalPolicies(fastify.redis),
-      getGuestPolicies(fastify.redis),
-      userId != null ? getUserPolicies(fastify.redis, userId) : Promise.resolve({}),
-    ]);
+    let global = {};
+    let guest = {};
+    let userPolicies = {};
+    let warning = null;
+    try {
+      [global, guest, userPolicies] = await Promise.all([
+        getGlobalPolicies(fastify.redis),
+        getGuestPolicies(fastify.redis),
+        userId != null ? getUserPolicies(fastify.redis, userId) : Promise.resolve({}),
+      ]);
+    } catch {
+      warning = 'Redis unavailable. Showing default-empty RBAC data.';
+    }
 
     return {
       routes: RBAC_ROUTES,
       global,
       guest,
       user: userId != null ? { id: userId, policies: userPolicies } : null,
+      warning,
     };
   });
 
@@ -149,10 +227,18 @@ export default async function adminRoutes(fastify) {
   });
 
   fastify.get('/api/admin/rate-limits', { preHandler: [fastify.requireAdmin] }, async () => {
-    const [guest, userLimits] = await Promise.all([
-      getGuestUrlLimit(fastify.redis),
-      getAllUserUrlLimits(fastify.redis),
-    ]);
+    let guest = DEFAULT_URL_LIMIT_PER_MINUTE;
+    let userLimits = {};
+    let warning = null;
+    try {
+      [guest, userLimits] = await Promise.all([
+        getGuestUrlLimit(fastify.redis),
+        getAllUserUrlLimits(fastify.redis),
+      ]);
+    } catch {
+      warning = 'Redis unavailable. Showing default rate limits.';
+    }
+
     return {
       defaults: {
         user_per_minute: DEFAULT_URL_LIMIT_PER_MINUTE,
@@ -161,6 +247,7 @@ export default async function adminRoutes(fastify) {
       guest_per_minute: guest,
       user_limits: userLimits,
       note: 'GAdmin users are unlimited for /api/url',
+      warning,
     };
   });
 
@@ -191,3 +278,4 @@ export default async function adminRoutes(fastify) {
     return { message: 'User rate limit updated', user_id: userId, max_per_minute: parsed.data.max_per_minute };
   });
 }
+

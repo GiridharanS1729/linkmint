@@ -19,8 +19,12 @@ export const API_CATALOG = [
   { method: 'DELETE', path: '/api/url/:id', auth: 'user/admin', description: 'Delete short URL' },
   { method: 'GET', path: '/api/all', auth: 'admin(signature)', description: 'List all users and URLs' },
   { method: 'GET', path: '/api/users', auth: 'admin(signature)', description: 'List all users' },
+  { method: 'GET', path: '/api/docs', auth: 'user', description: 'Role-based API docs' },
   { method: 'GET', path: '/api/admin/system', auth: 'admin(signature)', description: 'System/API status + metrics' },
   { method: 'GET', path: '/api/admin/docs', auth: 'admin(signature)', description: 'Swagger-like API catalog' },
+  { method: 'GET', path: '/api/admin/cors', auth: 'admin(signature)', description: 'List allowed CORS origins' },
+  { method: 'POST', path: '/api/admin/cors', auth: 'admin(signature)', description: 'Add allowed CORS origin' },
+  { method: 'DELETE', path: '/api/admin/cors', auth: 'admin(signature)', description: 'Remove allowed CORS origin' },
   { method: 'GET', path: '/api/admin/rbac', auth: 'admin(signature)', description: 'Read RBAC policies' },
   { method: 'PUT', path: '/api/admin/rbac/global', auth: 'admin(signature)', description: 'Set global route access' },
   { method: 'PUT', path: '/api/admin/rbac/guest', auth: 'admin(signature)', description: 'Set guest route access' },
@@ -30,6 +34,50 @@ export const API_CATALOG = [
   { method: 'PUT', path: '/api/admin/rate-limits/user/:id', auth: 'admin(signature)', description: 'Set per-user URL rate-limit' },
   { method: 'GET', path: '/:code', auth: 'public', description: '301 redirect by short code' },
 ];
+
+const SAMPLE_MAP = {
+  'POST /api/url': {
+    request_body: { long_url: 'https://example.com/abc', custom_alias: 'myalias1' },
+    response_body: { code: 'myalias1', url: 'https://linkvio.vercel.app/myalias1' },
+  },
+  'GET /api/myurls': {
+    request_body: null,
+    response_body: [{ id: 1, short_code: 'ab12Cd', long_url: 'https://example.com', click_count: 42 }],
+  },
+  'POST /api/auth/request-otp': {
+    request_body: { email: 'user@example.com' },
+    response_body: { message: 'OTP sent', ttl_seconds: 300 },
+  },
+  'POST /api/auth/verify-otp': {
+    request_body: { email: 'user@example.com', otp: '123456' },
+    response_body: { access_token: '<jwt>', user: { id: 2, email: 'user@example.com', role: 'user' } },
+  },
+  'POST /api/me/apikey/regenerate': {
+    request_body: null,
+    response_body: { access_token: '<jwt>', user: { api_key: '<new_api_key>' } },
+  },
+};
+
+export function buildDocsForRole(role) {
+  const normalized = String(role || '').toLowerCase();
+  let endpoints = API_CATALOG;
+
+  if (normalized !== 'gadmin' && normalized !== 'admin') {
+    endpoints = API_CATALOG.filter((api) => !String(api.auth).includes('admin'));
+  }
+
+  if (normalized === 'gadmin' || normalized === 'admin') {
+    return endpoints.map((api) => {
+      const key = `${api.method} ${api.path}`;
+      return {
+        ...api,
+        sample: SAMPLE_MAP[key] || null,
+      };
+    });
+  }
+
+  return endpoints;
+}
 
 export async function collectHealth(fastify) {
   let postgres = false;

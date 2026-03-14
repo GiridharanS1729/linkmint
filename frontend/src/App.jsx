@@ -9,6 +9,7 @@ const LandingPage = lazy(() => import('./pages/LandingPage'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Analytics = lazy(() => import('./pages/Analytics'));
 const Admin = lazy(() => import('./pages/Admin'));
+const ApiDocs = lazy(() => import('./pages/ApiDocs'));
 const ApiKey = lazy(() => import('./pages/ApiKey'));
 const Settings = lazy(() => import('./pages/Settings'));
 const NotFound = lazy(() => import('./pages/NotFound'));
@@ -51,7 +52,7 @@ function ProtectedRoute({ children, admin = false }) {
 
 export default function App() {
   const location = useLocation();
-  const { openAuthModal } = useAuth();
+  const { openAuthModal, auth, loading } = useAuth();
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -72,6 +73,16 @@ export default function App() {
             <Route path="/dashboard" element={<ProtectedRoute><Transition><Dashboard /></Transition></ProtectedRoute>} />
             <Route path="/analytics" element={<ProtectedRoute><Transition><Analytics /></Transition></ProtectedRoute>} />
             <Route path="/api-key" element={<ProtectedRoute><Transition><ApiKey /></Transition></ProtectedRoute>} />
+            <Route
+              path="/api/docs"
+              element={loading ? (
+                <FullPageSkeleton />
+              ) : auth ? (
+                <ProtectedRoute><Transition><ApiDocs /></Transition></ProtectedRoute>
+              ) : (
+                <Transition><NotFound /></Transition>
+              )}
+            />
             <Route path="/settings" element={<ProtectedRoute><Transition><Settings /></Transition></ProtectedRoute>} />
             <Route path="/all" element={<ProtectedRoute admin><Transition><Admin /></Transition></ProtectedRoute>} />
             <Route path="*" element={<Transition><NotFound /></Transition>} />
