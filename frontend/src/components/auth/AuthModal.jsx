@@ -30,22 +30,6 @@ export default function AuthModal() {
     }
   }
 
-  async function handleGoogle(credential) {
-    setLoading(true);
-    setError('');
-    try {
-      const payload = await api('/api/auth/google', {
-        method: 'POST',
-        body: JSON.stringify({ id_token: credential }),
-      });
-      onAuthSuccess(payload);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   async function handleEmailContinue({ email, authMethod, password }) {
     setLoading(true);
     setError('');
@@ -147,7 +131,7 @@ export default function AuthModal() {
             <div className="mt-4 space-y-3">
               {step === 'entry' ? (
                 <>
-                  <GoogleLoginButton onSuccess={handleGoogle} onError={(message) => setError(message)} />
+                  <GoogleLoginButton />
                   <div className="relative py-1 text-center text-xs text-slate-400">
                     <span className="bg-transparent px-2">or continue with email</span>
                   </div>

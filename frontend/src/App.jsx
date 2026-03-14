@@ -12,6 +12,14 @@ const ApiKey = lazy(() => import('./pages/ApiKey'));
 const Settings = lazy(() => import('./pages/Settings'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
+function GoogleCallbackPage() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-200">
+      Completing Google sign-in...
+    </div>
+  );
+}
+
 function Transition({ children }) {
   return (
     <motion.div
@@ -63,6 +71,7 @@ export default function App() {
             <Route path="/" element={<Transition><LandingPage /></Transition>} />
             <Route path="/login" element={<Navigate to="/?auth=1" replace />} />
             <Route path="/signup" element={<Navigate to="/?auth=1" replace />} />
+            <Route path="/api/auth/google/callback" element={<Transition><GoogleCallbackPage /></Transition>} />
             <Route path="/dashboard" element={<ProtectedRoute><Transition><Dashboard /></Transition></ProtectedRoute>} />
             <Route path="/analytics" element={<ProtectedRoute><Transition><Analytics /></Transition></ProtectedRoute>} />
             <Route path="/api-key" element={<ProtectedRoute><Transition><ApiKey /></Transition></ProtectedRoute>} />

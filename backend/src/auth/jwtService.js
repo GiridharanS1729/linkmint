@@ -12,7 +12,7 @@ export async function issueSession(fastify, reply, user) {
   reply.setCookie('refresh_token', refreshToken, {
     httpOnly: true,
     secure: fastify.config.cookieSecure,
-    sameSite: 'strict',
+    sameSite: fastify.config.cookieSameSite,
     path: '/',
     maxAge: 7 * 24 * 60 * 60,
   });
@@ -41,7 +41,7 @@ export function clearSessionCookie(fastify, reply) {
   reply.clearCookie('refresh_token', {
     httpOnly: true,
     secure: fastify.config.cookieSecure,
-    sameSite: 'strict',
+    sameSite: fastify.config.cookieSameSite,
     path: '/',
   });
 }

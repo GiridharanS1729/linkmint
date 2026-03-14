@@ -1,77 +1,37 @@
-import { useEffect, useRef } from 'react';
 import { Chrome } from 'lucide-react';
 import { Button } from '../ui/button';
 
-const GOOGLE_CLIENT_ID =
+const GOOGLE_CLIENT_ID = (
   import.meta.env.VITE_GOOGLE_CLIENT_ID ||
-  '72506720950-ba7kuthias0sg58mkv9gosnsf6cc9apn.apps.googleusercontent.com';
+  '72506720950-ba7kuthias0sg58mkv9gosnsf6cc9apn.apps.googleusercontent.com'
+).replace(/\s+/g, '');
 
-function loadGoogleScript() {
-  return new Promise((resolve, reject) => {
-    if (window.google?.accounts?.id) return resolve();
-
-    const existing = document.querySelector('script[data-google-gsi="true"]');
-    if (existing) {
-      existing.addEventListener('load', () => resolve());
-      existing.addEventListener('error', () => reject(new Error('Failed to load Google script')));
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.dataset.googleGsi = 'true';
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Failed to load Google script'));
-    document.head.appendChild(script);
-  });
+function createNonce() {
+  const arr = new Uint8Array(16);
+  window.crypto.getRandomValues(arr);
+  return Array.from(arr).map((x) => x.toString(16).padStart(2, '0')).join('');
 }
 
-export default function GoogleLoginButton({ onSuccess, onError }) {
-  const readyRef = useRef(false);
-
-  useEffect(() => {
-    let mounted = true;
-    loadGoogleScript()
-      .then(() => {
-        if (!mounted) return;
-        readyRef.current = true;
-      })
-      .catch((error) => {
-        onError?.(error.message);
-      });
-
-    return () => {
-      mounted = false;
-    };
-  }, [onError]);
-
+export default function GoogleLoginButton() {
   function handleGoogle() {
-    if (!readyRef.current || !window.google?.accounts?.id) {
-      onError?.('Google auth script not ready');
-      return;
-    }
+    const nonce = createNonce();
+    const state = btoa(JSON.stringify({
+      next: window.location.pathname + window.location.search,
+      t: Date.now(),
+    }));
 
-    try {
-      window.google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: (response) => {
-          if (response?.credential) onSuccess(response.credential);
-          else onError?.('Google credential not provided');
-        },
-        auto_select: false,
-        cancel_on_tap_outside: true,
-      });
+    const redirectUri = `${window.location.origin}/api/auth/google/callback`;
+    const params = new URLSearchParams({
+      client_id: GOOGLE_CLIENT_ID,
+      redirect_uri: redirectUri,
+      response_type: 'id_token',
+      scope: 'openid email profile',
+      nonce,
+      state,
+      prompt: 'select_account',
+    });
 
-      window.google.accounts.id.prompt((notification) => {
-        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          onError?.('Google sign-in was dismissed. Try again.');
-        }
-      });
-    } catch (error) {
-      onError?.(error.message || 'Google sign-in failed');
-    }
+    window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
   }
 
   return (

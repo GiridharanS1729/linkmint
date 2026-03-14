@@ -92,9 +92,21 @@ export function AuthProvider({ children }) {
 
       const payload = await response.json();
       applySession(payload);
+      let nextPath = '/dashboard';
+      const state = params.get('state');
+      if (state) {
+        try {
+          const decoded = JSON.parse(atob(state));
+          if (decoded?.next && typeof decoded.next === 'string') {
+            nextPath = decoded.next;
+          }
+        } catch {
+          // Ignore state parse errors and fallback to default.
+        }
+      }
 
-      // Clear token hash from URL after successful login.
-      window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+      // Force router transition out of callback route.
+      window.location.replace(nextPath);
       return true;
     } catch {
       return false;
