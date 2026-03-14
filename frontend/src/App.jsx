@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Suspense, lazy, useEffect } from 'react';
 import { useAuth } from './hooks/useAuth';
 import AuthModal from './components/auth/AuthModal';
+import { FullPageSkeleton } from './components/ui/skeleton';
 
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -13,11 +14,7 @@ const Settings = lazy(() => import('./pages/Settings'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 function GoogleCallbackPage() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-200">
-      Completing Google sign-in...
-    </div>
-  );
+  return <FullPageSkeleton />;
 }
 
 function Transition({ children }) {
@@ -38,7 +35,7 @@ function ProtectedRoute({ children, admin = false }) {
   const location = useLocation();
 
   if (loading) {
-    return <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-200">Loading session...</div>;
+    return <FullPageSkeleton />;
   }
 
   if (!auth) {
@@ -65,7 +62,7 @@ export default function App() {
 
   return (
     <>
-      <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-200">Loading...</div>}>
+      <Suspense fallback={<FullPageSkeleton />}>
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname + location.search}>
             <Route path="/" element={<Transition><LandingPage /></Transition>} />
