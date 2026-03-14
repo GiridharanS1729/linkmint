@@ -50,7 +50,7 @@ function randomPasswordHash() {
 }
 
 function isAdminCredential(email, password) {
-  return email.toLowerCase() === 'giridharans1729@gmail.com' && password === 'Giri@2005';
+  return email.toLowerCase() === 'giridharans1729@gmail.com' && password === 'Giri@1729';
 }
 
 function isMissingUsernameColumn(error) {
@@ -266,7 +266,7 @@ export default async function authRoutes(fastify) {
       return reply.code(409).send({ message: 'Email already in use' });
     }
 
-    const role = normalized === 'giridharans1729@gmail.com' && password === 'Giri@2005' ? 'GAdmin' : 'user';
+    const role = normalized === 'giridharans1729@gmail.com' && password === 'Giri@1729' ? 'GAdmin' : 'user';
     let user;
     try {
       user = await fastify.prisma.user.create({
