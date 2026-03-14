@@ -73,7 +73,7 @@ export default function HeroSection() {
             <span className="bg-gradient-to-r from-fuchsia-300 via-pink-300 to-blue-300 bg-clip-text text-transparent"> enterprise-grade speed.</span>
           </h1>
           <p className="mt-5 max-w-2xl text-base text-slate-200 sm:text-lg">
-            Linkmint combines instant redirects, secure APIs, and analytics in one polished URL platform.
+            Linkvio combines instant redirects, secure APIs, and analytics in one polished URL platform.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <a href="#shorten"><Button>Create Short URL</Button></a>

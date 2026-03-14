@@ -1,5 +1,6 @@
 import fp from 'fastify-plugin';
 import { verifyAdminSignature } from './auth/adminSignature.js';
+import { getRouteKey, isRouteAllowed } from './rbac.js';
 
 function parseBearerToken(authHeader) {
   if (!authHeader) return null;
@@ -9,6 +10,15 @@ function parseBearerToken(authHeader) {
 }
 
 export default fp(async function authPlugin(fastify) {
+  fastify.decorate('enforceRbac', async function enforceRbac(request, reply, userId = null, role = 'guest') {
+    if (role === 'GAdmin') return;
+    const routeKey = getRouteKey(request);
+    const allowed = await isRouteAllowed(fastify.redis, userId, routeKey);
+    if (!allowed) {
+      return reply.code(403).send({ message: 'Route access disabled by admin policy', route: routeKey });
+    }
+  });
+
   fastify.decorate('requireAuth', async function requireAuth(request, reply) {
     const token = parseBearerToken(request.headers.authorization);
     if (!token) {
@@ -38,6 +48,7 @@ export default fp(async function authPlugin(fastify) {
 
     request.user = payload;
     request.dbUser = dbUser;
+    await fastify.enforceRbac(request, reply, dbUser.id, dbUser.role);
   });
 
   fastify.decorate('optionalAuth', async function optionalAuth(request, reply) {
@@ -45,6 +56,7 @@ export default fp(async function authPlugin(fastify) {
     if (!hasAuth) {
       request.user = { role: 'guest' };
       request.dbUser = null;
+      await fastify.enforceRbac(request, reply, null, 'guest');
       return;
     }
 
@@ -91,6 +103,10 @@ export default fp(async function authPlugin(fastify) {
       return reply.code(403).send({ message: 'Admin access required' });
     }
 
-    await fastify.verifyAdminSignature(request, reply);
+    const path = request.url.split('?')[0];
+    const signatureRequired = request.method !== 'GET' || path.startsWith('/api/admin');
+    if (signatureRequired) {
+      await fastify.verifyAdminSignature(request, reply);
+    }
   });
 });

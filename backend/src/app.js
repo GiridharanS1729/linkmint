@@ -11,6 +11,7 @@ import authPlugin from './auth.js';
 import authRoutes from './routes/auth.js';
 import urlRoutes from './routes/url.js';
 import adminRoutes from './routes/admin.js';
+import { collectHealth } from './systemStatus.js';
 
 export async function createApp() {
   const app = Fastify({ logger: true });
@@ -45,7 +46,15 @@ export async function createApp() {
   await app.register(urlRoutes);
   await app.register(adminRoutes);
 
-  app.get('/health', async () => ({ status: 'ok' }));
+  app.get('/', async () => ({
+    service: 'linkvio-api',
+    status: 'ok',
+    docs: '/api/admin/docs',
+    health: '/health',
+    time: new Date().toISOString(),
+  }));
+
+  app.get('/health', async () => collectHealth(app));
 
   return app;
 }

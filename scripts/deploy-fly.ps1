@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 param(
-  [string]$BackendApp = 'linkmint-backend',
-  [string]$FrontendApp = 'linkmint-frontend'
+  [string]$BackendApp = 'linkvio-backend',
+  [string]$FrontendApp = 'linkvio-frontend'
 )
 
 $ErrorActionPreference = 'Stop'

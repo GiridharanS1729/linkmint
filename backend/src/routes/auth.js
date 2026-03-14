@@ -55,7 +55,7 @@ async function sendOtpEmail(fastify, email, otp) {
   const info = await transporter.sendMail({
     from: fastify.config.smtpFrom,
     to: email,
-    subject: 'Your Linkmint OTP Code',
+    subject: 'Your Linkvio OTP Code',
     text: `Your OTP is ${otp}. It expires in ${Math.floor(otpTtlSeconds / 60)} minutes.`,
     html: `<p>Your OTP is <strong>${otp}</strong>.</p><p>It expires in ${Math.floor(otpTtlSeconds / 60)} minutes.</p>`,
   });
@@ -248,7 +248,14 @@ export default async function authRoutes(fastify) {
     return reply.send(session);
   });
 
-  fastify.post('/api/logout', async (_, reply) => {
+  fastify.post('/api/logout', { preHandler: [fastify.optionalAuth] }, async (request, reply) => {
+    if (request.dbUser?.id) {
+      try {
+        await fastify.redis.del(`session:user:${request.dbUser.id}`);
+      } catch {
+        // ignore session metric cleanup errors
+      }
+    }
     clearSessionCookie(fastify, reply);
     return reply.send({ message: 'Logged out' });
   });

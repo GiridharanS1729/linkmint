@@ -17,6 +17,12 @@ export async function issueSession(fastify, reply, user) {
     maxAge: 7 * 24 * 60 * 60,
   });
 
+  try {
+    await fastify.redis.set(`session:user:${user.id}`, '1', 'EX', 7 * 24 * 60 * 60);
+  } catch {
+    // Session tracking is best-effort and should never block auth.
+  }
+
   return {
     access_token: accessToken,
     expires_in: fastify.config.accessTokenExpiresIn,

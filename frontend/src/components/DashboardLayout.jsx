@@ -19,7 +19,7 @@ export default function DashboardLayout({ title, children }) {
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(217,70,239,.25),transparent_35%),radial-gradient(circle_at_90%_20%,rgba(59,130,246,.2),transparent_28%),#020617]">
       <div className="mx-auto grid max-w-7xl gap-4 px-4 py-6 lg:grid-cols-[260px_1fr]">
         <aside className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl">
-          <p className="mb-4 text-xl font-semibold text-white">linkmint</p>
+          <p className="mb-4 text-xl font-semibold text-white">linkvio</p>
           <nav className="space-y-2">
             {items.map((item) => (
               <Link
@@ -34,7 +34,7 @@ export default function DashboardLayout({ title, children }) {
             {auth?.role === 'GAdmin' && (
               <Link to="/all" className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-300 hover:bg-white/10 hover:text-white">
                 <LayoutDashboard className="h-4 w-4" />
-                Admin Page
+                Admin Console
               </Link>
             )}
           </nav>

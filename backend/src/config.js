@@ -39,5 +39,5 @@ export const config = {
   smtpPort: Number(env('SMTP_PORT', 587)),
   smtpUser: env('SMTP_USER', ''),
   smtpPass: env('SMTP_PASS', ''),
-  smtpFrom: env('SMTP_FROM', 'noreply@linkmint.local'),
+  smtpFrom: env('SMTP_FROM', 'noreply@linkvio.local'),
 };

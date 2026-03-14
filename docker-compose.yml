@@ -1,9 +1,9 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: linkmint-postgres
+    container_name: linkvio-postgres
     environment:
-      POSTGRES_DB: linkmint
+      POSTGRES_DB: linkvio
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
@@ -13,7 +13,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: linkmint-redis
+    container_name: linkvio-redis
     ports:
       - '6379:6379'
 
@@ -21,11 +21,11 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: linkmint-backend
+    container_name: linkvio-backend
     environment:
       PORT: 3000
       HOST: 0.0.0.0
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/linkmint
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/linkvio
       REDIS_URL: redis://redis:6379
       JWT_SECRET: super-secret-change-me
       JWT_EXPIRES_IN: 1m
@@ -40,7 +40,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: linkmint-frontend
+    container_name: linkvio-frontend
     environment:
       VITE_API_URL: http://localhost:3000
     depends_on:

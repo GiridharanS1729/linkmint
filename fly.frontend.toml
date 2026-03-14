@@ -1,4 +1,4 @@
-app = "linkmint-frontend"
+app = "linkvio-frontend"
 primary_region = "iad"
 
 [build]

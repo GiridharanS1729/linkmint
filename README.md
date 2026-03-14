@@ -1,4 +1,4 @@
-# linkmint
+# linkvio
 
 Production-ready URL shortener monorepo.
 
@@ -43,7 +43,7 @@ npm run dev
 
 ## Default Seed Admin
 
-- email: `admin@linkmint`
+- email: `admin@linkvio`
 - password: `admin123`
 - role: `GAdmin`
 
@@ -259,7 +259,7 @@ Prerequisite: install Fly CLI and login.
 
 ```bash
 cd scripts
-pwsh ./deploy-fly.ps1 -BackendApp linkmint-backend -FrontendApp linkmint-frontend
+pwsh ./deploy-fly.ps1 -BackendApp linkvio-backend -FrontendApp linkvio-frontend
 ```
 
 Manual commands used by the script:

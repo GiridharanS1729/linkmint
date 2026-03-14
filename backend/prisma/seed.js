@@ -5,7 +5,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-  const email = 'admin@linkmint';
+  const email = 'admin@linkvio';
   const password = 'admin123';
   const passwordHash = await bcrypt.hash(password, 10);
 
@@ -23,7 +23,7 @@ async function main() {
     },
   });
 
-  console.log('Seeded admin: admin@linkmint / admin123');
+  console.log('Seeded admin: admin@linkvio / admin123');
 }
 
 main()

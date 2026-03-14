@@ -120,7 +120,7 @@ export default function AuthModal() {
               <Sparkles className="h-3.5 w-3.5" />
               Secure authentication
             </p>
-            <h2 className="mt-4 text-2xl font-semibold text-white">Welcome to linkmint</h2>
+            <h2 className="mt-4 text-2xl font-semibold text-white">Welcome to linkvio</h2>
             <p className="mt-1 text-sm text-slate-300">Continue with Google or email OTP verification.</p>
 
             <div className="mt-4 grid grid-cols-2 rounded-xl border border-white/15 bg-slate-900/40 p-1">

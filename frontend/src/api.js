@@ -23,7 +23,7 @@ export function configureApiAuth({ getAccessToken, getApiKey, refreshAuth, onUna
 }
 
 function shouldSignAdminRequest(path) {
-  return path.startsWith('/api/all') || path.startsWith('/api/users');
+  return path.startsWith('/api/all') || path.startsWith('/api/users') || path.startsWith('/api/admin');
 }
 
 async function buildHeaders(path, options) {

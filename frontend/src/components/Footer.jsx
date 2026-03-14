@@ -5,7 +5,7 @@ export default function Footer() {
     <footer className="mt-20 border-t border-white/15 bg-slate-950/70 px-4 py-10">
       <div className="mx-auto grid max-w-7xl gap-8 sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <h4 className="text-lg font-semibold text-white">linkmint</h4>
+          <h4 className="text-lg font-semibold text-white">linkvio</h4>
           <p className="mt-2 text-sm text-slate-300">Premium URL infrastructure with smooth analytics and secure API workflows.</p>
         </div>
         <div>

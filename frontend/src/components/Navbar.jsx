@@ -28,9 +28,9 @@ export default function Navbar() {
   return (
     <header className={`fixed inset-x-0 top-0 z-50 px-4 transition-all duration-300 ${scrolled ? 'pt-2' : 'pt-4'}`}>
       <div className={`mx-auto flex max-w-7xl items-center justify-between rounded-2xl border border-white/20 px-4 transition-all duration-300 ${scrolled ? 'h-14 bg-slate-900/70 backdrop-blur-2xl' : 'h-16 bg-slate-900/45 backdrop-blur-xl'}`}>
-        <Link to="/" className="flex items-center gap-2 text-white" aria-label="linkmint home">
+        <Link to="/" className="flex items-center gap-2 text-white" aria-label="linkvio home">
           <Rocket className="h-5 w-5 text-fuchsia-300" />
-          <span className="font-semibold tracking-wide">linkmint</span>
+          <span className="font-semibold tracking-wide">linkvio</span>
         </Link>
 
         <nav className="hidden items-center gap-6 text-sm text-slate-200 md:flex">

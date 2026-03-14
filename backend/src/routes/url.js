@@ -58,7 +58,11 @@ async function createShortUrl(fastify, payload, request) {
     },
   });
 
-  await fastify.redis.set(shortCode, longUrl);
+  try {
+    await fastify.redis.set(shortCode, longUrl);
+  } catch (error) {
+    request.log.warn({ error }, 'Redis cache set failed during URL creation');
+  }
 
   return {
     url,
@@ -168,9 +172,17 @@ export default async function urlRoutes(fastify) {
     }
 
     const updated = await fastify.prisma.url.update({ where: { id }, data });
-    await fastify.redis.set(updated.shortCode, updated.longUrl);
+    try {
+      await fastify.redis.set(updated.shortCode, updated.longUrl);
+    } catch (error) {
+      request.log.warn({ error }, 'Redis cache set failed during URL update');
+    }
     if (existing.shortCode !== updated.shortCode) {
-      await fastify.redis.del(existing.shortCode);
+      try {
+        await fastify.redis.del(existing.shortCode);
+      } catch (error) {
+        request.log.warn({ error }, 'Redis cache delete failed during code rename');
+      }
     }
 
     return {
@@ -193,14 +205,23 @@ export default async function urlRoutes(fastify) {
     }
 
     await fastify.prisma.url.delete({ where: { id } });
-    await fastify.redis.del(existing.shortCode);
+    try {
+      await fastify.redis.del(existing.shortCode);
+    } catch (error) {
+      request.log.warn({ error }, 'Redis cache delete failed during URL delete');
+    }
     return reply.code(204).send();
   });
 
   fastify.get('/:code', async (request, reply) => {
     const code = request.params.code;
 
-    let longUrl = await fastify.redis.get(code);
+    let longUrl = null;
+    try {
+      longUrl = await fastify.redis.get(code);
+    } catch (error) {
+      request.log.warn({ error }, 'Redis cache get failed during redirect');
+    }
     let urlRecord = null;
 
     if (!longUrl) {
@@ -208,7 +229,11 @@ export default async function urlRoutes(fastify) {
       if (!urlRecord) return reply.code(404).send({ message: 'Short URL not found' });
 
       longUrl = urlRecord.longUrl;
-      await fastify.redis.set(code, longUrl);
+      try {
+        await fastify.redis.set(code, longUrl);
+      } catch (error) {
+        request.log.warn({ error }, 'Redis cache set failed during redirect');
+      }
     } else {
       urlRecord = await fastify.prisma.url.findUnique({ where: { shortCode: code }, select: { id: true } });
     }
