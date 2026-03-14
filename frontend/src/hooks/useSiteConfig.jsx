@@ -8,6 +8,10 @@ function hexToRgb(hex, fallback) {
   return `${parseInt(safe.slice(1, 3), 16)}, ${parseInt(safe.slice(3, 5), 16)}, ${parseInt(safe.slice(5, 7), 16)}`;
 }
 
+function safeHex(hex, fallback) {
+  return /^#[0-9a-fA-F]{6}$/.test(String(hex || '')) ? String(hex) : fallback;
+}
+
 export function SiteConfigProvider({ children }) {
   const [siteConfig, setSiteConfig] = useState({
     site_name: 'linkvio',
@@ -28,7 +32,7 @@ export function SiteConfigProvider({ children }) {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeoutMs);
       try {
-        const res = await fetch(url, { signal: controller.signal });
+      const res = await fetch(url, { signal: controller.signal, cache: 'no-store' });
         if (!res.ok) return {};
         return await res.json();
       } catch {
@@ -69,8 +73,12 @@ export function SiteConfigProvider({ children }) {
 
   useEffect(() => {
     const root = document.documentElement;
-    root.style.setProperty('--ui-primary-rgb', hexToRgb(siteConfig.primary, '#d946ef'));
-    root.style.setProperty('--ui-secondary-rgb', hexToRgb(siteConfig.secondary, '#3b82f6'));
+    const primary = safeHex(siteConfig.primary, '#d946ef');
+    const secondary = safeHex(siteConfig.secondary, '#3b82f6');
+    root.style.setProperty('--ui-primary', primary);
+    root.style.setProperty('--ui-secondary', secondary);
+    root.style.setProperty('--ui-primary-rgb', hexToRgb(primary, '#d946ef'));
+    root.style.setProperty('--ui-secondary-rgb', hexToRgb(secondary, '#3b82f6'));
   }, [siteConfig.primary, siteConfig.secondary]);
 
   const value = useMemo(() => ({ siteConfig, setSiteConfig }), [siteConfig]);

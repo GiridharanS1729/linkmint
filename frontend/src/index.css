@@ -4,6 +4,8 @@
   color-scheme: dark;
   --bg: #020617;
   --text: #e2e8f0;
+  --ui-primary: #d946ef;
+  --ui-secondary: #3b82f6;
   --ui-primary-rgb: 217, 70, 239;
   --ui-secondary-rgb: 59, 130, 246;
   font-family: "Sora", "Poppins", "Segoe UI", sans-serif;
@@ -26,8 +28,9 @@ body {
 
 .theme-bg {
   background:
-    radial-gradient(circle at top, rgba(var(--ui-primary-rgb), 0.25), transparent 35%),
-    radial-gradient(circle at 90% 20%, rgba(var(--ui-secondary-rgb), 0.2), transparent 28%),
+    radial-gradient(circle at top, rgba(var(--ui-primary-rgb), 0.32), transparent 36%),
+    radial-gradient(circle at 90% 20%, rgba(var(--ui-secondary-rgb), 0.28), transparent 30%),
+    linear-gradient(145deg, rgba(var(--ui-primary-rgb), 0.08), rgba(var(--ui-secondary-rgb), 0.06)),
     #020617;
 }
 

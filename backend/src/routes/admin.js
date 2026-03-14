@@ -120,11 +120,17 @@ export default async function adminRoutes(fastify) {
     };
   });
 
-  fastify.get('/api/public/theme', async () => {
+  fastify.get('/api/public/theme', async (_, reply) => {
+    reply.header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    reply.header('Pragma', 'no-cache');
+    reply.header('Expires', '0');
     return getTheme(fastify.redis);
   });
 
-  fastify.get('/api/public/site-config', async () => {
+  fastify.get('/api/public/site-config', async (_, reply) => {
+    reply.header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    reply.header('Pragma', 'no-cache');
+    reply.header('Expires', '0');
     return getSiteConfig(fastify.redis, fastify.prisma);
   });
 

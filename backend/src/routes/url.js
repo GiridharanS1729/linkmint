@@ -108,6 +108,7 @@ async function createShortUrl(fastify, payload, request, includeExpiry = true) {
 export default async function urlRoutes(fastify) {
   let expiryColumnAvailable = true;
   const PUBLIC_STATS_CACHE_KEY = 'public:stats:v1';
+  const TOTAL_VIEWS_COUNTER_KEY = 'counter:total_views';
 
   async function runWithExpiryFallback(withExpiryFn, withoutExpiryFn) {
     if (!expiryColumnAvailable) {
@@ -333,7 +334,11 @@ export default async function urlRoutes(fastify) {
     };
   });
 
-  fastify.get('/api/public/stats', async () => {
+  fastify.get('/api/public/stats', async (_, reply) => {
+    reply.header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    reply.header('Pragma', 'no-cache');
+    reply.header('Expires', '0');
+
     try {
       const cached = await fastify.redis.get(PUBLIC_STATS_CACHE_KEY);
       if (cached) {
@@ -348,6 +353,13 @@ export default async function urlRoutes(fastify) {
       fastify.prisma.url.count(),
       fastify.prisma.click.count(),
     ]);
+    let redisViews = 0;
+    try {
+      redisViews = Number(await fastify.redis.get(TOTAL_VIEWS_COUNTER_KEY) || 0);
+    } catch {
+      redisViews = 0;
+    }
+    const totalViews = Math.max(totalClicks, redisViews);
 
     let avgRedirectSpeedMs = 100;
     try {
@@ -362,7 +374,7 @@ export default async function urlRoutes(fastify) {
     const payload = {
       total_urls: totalUrls,
       total_clicks: totalClicks,
-      total_views: totalClicks,
+      total_views: totalViews,
       avg_redirect_speed_ms: avgRedirectSpeedMs,
     };
 
@@ -474,6 +486,12 @@ export default async function urlRoutes(fastify) {
         }
       } catch (error) {
         request.log.error({ error }, 'Failed to record click');
+      }
+
+      try {
+        await fastify.redis.incr(TOTAL_VIEWS_COUNTER_KEY);
+      } catch {
+        // best effort counter for public views display
       }
     }
 
