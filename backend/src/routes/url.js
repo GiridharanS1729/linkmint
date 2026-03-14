@@ -114,6 +114,13 @@ export default async function urlRoutes(fastify) {
         return reply.code(result.error.status).send(result.error.body);
       }
 
+      if (result.url.createdFrom === 'site') {
+        return reply.code(201).send({
+          code: result.url.shortCode,
+          url: result.url.longUrl,
+        });
+      }
+
       return reply.code(201).send({
         id: result.url.id,
         short_code: result.url.shortCode,
