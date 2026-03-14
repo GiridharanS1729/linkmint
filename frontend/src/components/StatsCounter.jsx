@@ -29,14 +29,18 @@ function Stat({ label, value, suffix = '' }) {
   );
 }
 
-export default function StatsCounter() {
+export default function StatsCounter({ stats }) {
+  const totalUrls = Number(stats?.total_urls || 0);
+  const totalClicks = Number(stats?.total_clicks || 0);
+  const avgRedirect = Number(stats?.avg_redirect_speed_ms || 0);
+
   return (
     <section className="mx-auto max-w-7xl px-4 py-20">
       <div className="rounded-3xl border border-white/15 bg-gradient-to-r from-fuchsia-500/15 via-transparent to-blue-500/20 p-6 sm:p-10">
         <div className="grid gap-4 sm:grid-cols-3">
-          <Stat label="Total URLs created" value={14892} />
-          <Stat label="Total clicks tracked" value={276412} />
-          <Stat label="Average redirect speed" value={92} suffix="ms" />
+          <Stat label="Total URLs created" value={totalUrls} />
+          <Stat label="Total clicks tracked" value={totalClicks} />
+          <Stat label="Average redirect speed" value={avgRedirect} suffix="ms" />
         </div>
       </div>
     </section>

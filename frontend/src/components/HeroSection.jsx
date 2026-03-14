@@ -92,20 +92,27 @@ export default function HeroSection() {
             {error && <p className="mt-4 rounded-xl border border-rose-400/30 bg-rose-500/10 p-3 text-sm text-rose-200">{error}</p>}
 
             {result && (
+              (() => {
+                const code = result.code || result.short_code;
+                const finalUrl = result.url || (code ? shortUrl(code) : '');
+                if (!finalUrl) return null;
+                return (
               <div className="mt-4 rounded-xl border border-emerald-300/30 bg-emerald-500/10 p-3 text-sm text-emerald-100">
                 <p className="font-medium">Short URL ready</p>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <a href={shortUrl(result.short_code)} target="_blank" rel="noreferrer" className="underline">
-                    {shortUrl(result.short_code)}
+                  <a href={finalUrl} target="_blank" rel="noreferrer" className="break-all underline">
+                    {finalUrl}
                   </a>
-                  <button className="rounded bg-white/20 p-2" onClick={() => navigator.clipboard.writeText(shortUrl(result.short_code))} aria-label="Copy short URL">
+                  <button className="rounded bg-white/20 p-2" onClick={() => navigator.clipboard.writeText(finalUrl)} aria-label="Copy short URL">
                     <Copy className="h-4 w-4" />
                   </button>
-                  <a href={shortUrl(result.short_code)} target="_blank" rel="noreferrer" className="rounded bg-white/20 p-2" aria-label="Open short URL">
+                  <a href={finalUrl} target="_blank" rel="noreferrer" className="rounded bg-white/20 p-2" aria-label="Open short URL">
                     <ExternalLink className="h-4 w-4" />
                   </a>
                 </div>
               </div>
+                );
+              })()
             )}
           </CardContent>
         </Card>

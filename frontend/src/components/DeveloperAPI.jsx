@@ -19,7 +19,7 @@ export default function DeveloperAPI() {
 
   return (
     <section id="api" className="mx-auto max-w-7xl px-4 py-20">
-      <div className="grid gap-6 rounded-3xl border border-white/15 bg-slate-900/60 p-6 sm:p-8 lg:grid-cols-2">
+      <div className="grid gap-6 rounded-3xl border border-white/15 bg-slate-900/60 p-4 sm:p-6 lg:grid-cols-2 lg:p-8">
         <div>
           <p className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs text-slate-200">
             <Terminal className="h-4 w-4" />
@@ -29,15 +29,15 @@ export default function DeveloperAPI() {
           <p className="mt-3 text-slate-300">Use the existing API to create, manage, and track URLs from any service.</p>
         </div>
 
-        <div className="rounded-2xl border border-white/15 bg-slate-950/80 p-4">
-          <div className="mb-3 flex items-center justify-between text-xs text-slate-400">
+        <div className="min-w-0 rounded-2xl border border-white/15 bg-slate-950/80 p-3 sm:p-4">
+          <div className="mb-3 flex flex-col gap-2 text-xs text-slate-400 sm:flex-row sm:items-center sm:justify-between">
             <span>POST /api/url</span>
             <Button variant="secondary" size="sm" onClick={copySnippet} aria-label="Copy curl snippet">
               <Copy className="mr-1 h-4 w-4" />
               {copied ? 'Copied' : 'Copy'}
             </Button>
           </div>
-          <pre className="overflow-auto text-xs leading-6 text-slate-200"><code>{snippet}</code></pre>
+          <pre className="overflow-x-auto whitespace-pre-wrap break-words text-[11px] leading-5 text-slate-200 sm:text-xs sm:leading-6"><code>{snippet}</code></pre>
         </div>
       </div>
     </section>

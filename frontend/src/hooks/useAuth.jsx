@@ -37,26 +37,27 @@ export function AuthProvider({ children }) {
   }, []);
 
   const refreshAuth = useCallback(async () => {
-    try {
-      const response = await fetch(`${API_URL}/api/refresh`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: '{}',
-      });
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        const response = await fetch(`${API_URL}/api/refresh`, {
+          method: 'POST',
+          credentials: 'include',
+        });
 
-      if (!response.ok) {
-        clearSession();
-        return false;
+        if (!response.ok) {
+          continue;
+        }
+
+        const payload = await response.json();
+        applySession(payload);
+        return true;
+      } catch {
+        // Retry once for transient network/cold-start failures.
       }
-
-      const payload = await response.json();
-      applySession(payload);
-      return true;
-    } catch {
-      clearSession();
-      return false;
     }
+
+    clearSession();
+    return false;
   }, [applySession, clearSession]);
 
   const logout = useCallback(async () => {

@@ -37,10 +37,14 @@ ENV VITE_API_URL=http://localhost:3000
 RUN apk add --no-cache dumb-init
 RUN npm i -g serve@14
 
-COPY --from=builder /app/node_modules ./node_modules
+COPY package.json package-lock.json ./
+COPY backend/package.json ./backend/package.json
+RUN npm ci --omit=dev --ignore-scripts --workspace backend --include-workspace-root=false
+
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/backend ./backend
 COPY --from=builder /app/frontend/dist ./frontend/dist
-COPY --from=builder /app/package.json ./package.json
 
 EXPOSE 3000 5173
 
