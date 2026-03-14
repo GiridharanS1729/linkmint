@@ -1,0 +1,23 @@
+{
+  "name": "linkmint",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace backend\" \"npm run dev --workspace frontend\"",
+    "up": "docker compose up --build",
+    "up:detached": "docker compose up --build -d && powershell -ExecutionPolicy Bypass -File .\\scripts\\print-urls.ps1",
+    "build": "npm run build --workspace frontend",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down -v",
+    "prisma:generate": "npm run prisma:generate --workspace backend",
+    "prisma:migrate": "npm run prisma:migrate --workspace backend",
+    "seed": "npm run prisma:seed --workspace backend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

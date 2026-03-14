@@ -1,0 +1,15 @@
+app = "linkmint-frontend"
+primary_region = "iad"
+
+[build]
+  dockerfile = "frontend/Dockerfile"
+
+[[services]]
+  internal_port = 5173
+  protocol = "tcp"
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
