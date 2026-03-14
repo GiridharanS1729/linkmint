@@ -17,7 +17,16 @@ function applyTheme(theme) {
 export default function Settings() {
   const { auth } = useAuth();
   const { siteConfig, setSiteConfig } = useSiteConfig();
-  const [form, setForm] = useState({ site_name: 'linkvio', primary: '#d946ef', secondary: '#3b82f6' });
+  const [form, setForm] = useState({
+    site_name: 'linkvio',
+    primary: '#d946ef',
+    secondary: '#3b82f6',
+    developer_name: 'Giridharan',
+    portfolio_url: '',
+    copyright_year: new Date().getFullYear(),
+    maintenance_mode: false,
+    maintenance_message: 'We are performing scheduled maintenance. Please check back shortly.',
+  });
   const [message, setMessage] = useState('');
   const isAdmin = auth?.role === 'GAdmin';
 
@@ -29,6 +38,11 @@ export default function Settings() {
           site_name: data.site_name || 'linkvio',
           primary: data.primary || '#d946ef',
           secondary: data.secondary || '#3b82f6',
+          developer_name: data.developer_name || 'Giridharan',
+          portfolio_url: data.portfolio_url || '',
+          copyright_year: Number(data.copyright_year || new Date().getFullYear()),
+          maintenance_mode: Boolean(data.maintenance_mode),
+          maintenance_message: data.maintenance_message || 'We are performing scheduled maintenance. Please check back shortly.',
         };
         setForm(next);
         setSiteConfig((prev) => ({ ...prev, ...next }));
@@ -40,7 +54,16 @@ export default function Settings() {
   async function saveSiteConfig() {
     setMessage('');
     try {
-      const payload = { site_name: form.site_name, primary: form.primary, secondary: form.secondary };
+      const payload = {
+        site_name: form.site_name,
+        primary: form.primary,
+        secondary: form.secondary,
+        developer_name: form.developer_name,
+        portfolio_url: form.portfolio_url,
+        copyright_year: Number(form.copyright_year),
+        maintenance_mode: Boolean(form.maintenance_mode),
+        maintenance_message: form.maintenance_message,
+      };
       const data = await api('/api/admin/site-config', { method: 'PUT', body: JSON.stringify(payload) });
       const next = data.config || payload;
       setSiteConfig((prev) => ({ ...prev, ...next }));
@@ -63,6 +86,18 @@ export default function Settings() {
           <label className="rounded-xl border border-white/10 bg-slate-900/40 p-3 text-sm">
             <span className="mb-2 block text-slate-300">Site Name</span>
             <input type="text" value={form.site_name} disabled={!isAdmin} onChange={(e) => setForm((prev) => ({ ...prev, site_name: e.target.value }))} className="h-10 w-full rounded-md border border-white/20 bg-transparent px-3 text-white" />
+          </label>
+          <label className="rounded-xl border border-white/10 bg-slate-900/40 p-3 text-sm">
+            <span className="mb-2 block text-slate-300">Developer Name</span>
+            <input type="text" value={form.developer_name} disabled={!isAdmin} onChange={(e) => setForm((prev) => ({ ...prev, developer_name: e.target.value }))} className="h-10 w-full rounded-md border border-white/20 bg-transparent px-3 text-white" />
+          </label>
+          <label className="rounded-xl border border-white/10 bg-slate-900/40 p-3 text-sm">
+            <span className="mb-2 block text-slate-300">Portfolio URL</span>
+            <input type="url" value={form.portfolio_url} disabled={!isAdmin} onChange={(e) => setForm((prev) => ({ ...prev, portfolio_url: e.target.value }))} className="h-10 w-full rounded-md border border-white/20 bg-transparent px-3 text-white" />
+          </label>
+          <label className="rounded-xl border border-white/10 bg-slate-900/40 p-3 text-sm">
+            <span className="mb-2 block text-slate-300">Copyright Year</span>
+            <input type="number" value={form.copyright_year} disabled={!isAdmin} onChange={(e) => setForm((prev) => ({ ...prev, copyright_year: e.target.value }))} className="h-10 w-full rounded-md border border-white/20 bg-transparent px-3 text-white" />
           </label>
         </div>
 
@@ -88,4 +123,3 @@ export default function Settings() {
     </DashboardLayout>
   );
 }
-

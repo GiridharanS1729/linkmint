@@ -35,10 +35,16 @@ export default function DashboardLayout({ title, children }) {
               </Link>
             ))}
             {auth?.role === 'GAdmin' && (
-              <Link to="/all" className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-300 hover:bg-white/10 hover:text-white">
-                <LayoutDashboard className="h-4 w-4" />
-                Admin Console
-              </Link>
+              <>
+                <Link to="/all" className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-300 hover:bg-white/10 hover:text-white">
+                  <LayoutDashboard className="h-4 w-4" />
+                  Admin Console
+                </Link>
+                <Link to="/admin/giri" className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-300 hover:bg-white/10 hover:text-white">
+                  <Settings className="h-4 w-4" />
+                  Site Control
+                </Link>
+              </>
             )}
           </nav>
         </aside>

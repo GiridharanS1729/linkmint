@@ -3,6 +3,9 @@ import { useSiteConfig } from '../hooks/useSiteConfig';
 
 export default function Footer() {
   const { siteConfig } = useSiteConfig();
+  const year = Number(siteConfig.copyright_year || new Date().getFullYear());
+  const developer = siteConfig.developer_name || 'Developer';
+  const hasPortfolio = Boolean(siteConfig.portfolio_url);
   return (
     <footer className="mt-20 border-t border-white/15 bg-slate-950/70 px-4 py-10">
       <div className="mx-auto grid max-w-7xl gap-8 sm:grid-cols-2 lg:grid-cols-4">
@@ -30,6 +33,18 @@ export default function Footer() {
           <h5 className="text-sm font-semibold uppercase tracking-wide text-slate-200">Free Tier</h5>
           <p className="mt-3 text-sm text-slate-300">Start free with URL shortening, dashboard insights, and API access for personal projects.</p>
         </div>
+      </div>
+      <div className="mx-auto mt-8 max-w-7xl border-t border-white/10 pt-4 text-xs text-slate-300">
+        <p>
+          Copyright {year} {siteConfig.site_name}. Built by{' '}
+          {hasPortfolio ? (
+            <a href={siteConfig.portfolio_url} target="_blank" rel="noreferrer" className="text-white underline decoration-white/40 underline-offset-4 hover:decoration-white">
+              {developer}
+            </a>
+          ) : (
+            <span className="text-white">{developer}</span>
+          )}
+        </p>
       </div>
     </footer>
   );

@@ -36,6 +36,11 @@ const setSiteConfigSchema = z.object({
   site_name: z.string().min(1).max(40),
   primary: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   secondary: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+  developer_name: z.string().min(1).max(60).optional(),
+  portfolio_url: z.string().url().or(z.literal('')).optional(),
+  copyright_year: z.number().int().min(2000).max(3000).optional(),
+  maintenance_mode: z.boolean().optional(),
+  maintenance_message: z.string().min(1).max(220).optional(),
 });
 
 function isMissingExpiresAtColumn(error) {
@@ -120,7 +125,7 @@ export default async function adminRoutes(fastify) {
   });
 
   fastify.get('/api/public/site-config', async () => {
-    return getSiteConfig(fastify.redis);
+    return getSiteConfig(fastify.redis, fastify.prisma);
   });
 
   fastify.get('/api/admin/docs', { preHandler: [fastify.requireAdmin] }, async () => ({
@@ -177,7 +182,7 @@ export default async function adminRoutes(fastify) {
   });
 
   fastify.get('/api/admin/site-config', { preHandler: [fastify.requireAdmin] }, async () => {
-    return getSiteConfig(fastify.redis);
+    return getSiteConfig(fastify.redis, fastify.prisma);
   });
 
   fastify.put('/api/admin/site-config', { preHandler: [fastify.requireAdmin] }, async (request, reply) => {
@@ -185,8 +190,42 @@ export default async function adminRoutes(fastify) {
     if (!parsed.success) {
       return reply.code(400).send({ message: 'Invalid site config payload', issues: parsed.error.flatten() });
     }
-    const config = await setSiteConfig(fastify.redis, sanitizeSiteConfig(parsed.data));
+    const config = await setSiteConfig(fastify.redis, sanitizeSiteConfig(parsed.data), fastify.prisma);
     return { message: 'Site config updated', config };
+  });
+
+  fastify.get('/api/admin/giri', { preHandler: [fastify.requireAdmin] }, async () => {
+    const config = await getSiteConfig(fastify.redis, fastify.prisma);
+    return {
+      status: config.maintenance_mode ? 'maintenance' : 'working',
+      maintenance_mode: config.maintenance_mode,
+      maintenance_message: config.maintenance_message,
+    };
+  });
+
+  fastify.put('/api/admin/giri', { preHandler: [fastify.requireAdmin] }, async (request, reply) => {
+    const parsed = z.object({
+      maintenance_mode: z.boolean(),
+      maintenance_message: z.string().min(1).max(220).optional(),
+    }).safeParse(request.body);
+
+    if (!parsed.success) {
+      return reply.code(400).send({ message: 'Invalid maintenance payload', issues: parsed.error.flatten() });
+    }
+
+    const current = await getSiteConfig(fastify.redis, fastify.prisma);
+    const next = sanitizeSiteConfig({
+      ...current,
+      maintenance_mode: parsed.data.maintenance_mode,
+      maintenance_message: parsed.data.maintenance_message ?? current.maintenance_message,
+    });
+    const saved = await setSiteConfig(fastify.redis, next, fastify.prisma);
+
+    return {
+      message: 'Maintenance status updated',
+      status: saved.maintenance_mode ? 'maintenance' : 'working',
+      config: saved,
+    };
   });
 
   fastify.get('/api/admin/cors', { preHandler: [fastify.requireAdmin] }, async () => {

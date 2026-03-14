@@ -13,6 +13,11 @@ export function SiteConfigProvider({ children }) {
     site_name: 'linkvio',
     primary: '#d946ef',
     secondary: '#3b82f6',
+    developer_name: 'Giridharan',
+    portfolio_url: '',
+    copyright_year: new Date().getFullYear(),
+    maintenance_mode: false,
+    maintenance_message: 'We are performing scheduled maintenance. Please check back shortly.',
     total_views: 0,
   });
 
@@ -25,15 +30,36 @@ export function SiteConfigProvider({ children }) {
       root.style.setProperty('--ui-secondary-rgb', hexToRgb(cfg.secondary, '#3b82f6'));
     };
 
+    const fetchWithTimeout = async (url, timeoutMs = 3000) => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const res = await fetch(url, { signal: controller.signal });
+        if (!res.ok) return {};
+        return await res.json();
+      } catch {
+        return {};
+      } finally {
+        clearTimeout(timer);
+      }
+    };
+
     const refreshSiteConfig = async () => {
-      const cfg = await fetch(`${API_URL}/api/public/site-config`).then((r) => r.json()).catch(() => ({}));
-      const stats = await fetch(`${API_URL}/api/public/stats`).then((r) => r.json()).catch(() => ({}));
+      const [cfg, stats] = await Promise.all([
+        fetchWithTimeout(`${API_URL}/api/public/site-config`),
+        fetchWithTimeout(`${API_URL}/api/public/stats`),
+      ]);
       if (!mounted) return;
 
       const next = {
         site_name: cfg.site_name || 'linkvio',
         primary: cfg.primary || '#d946ef',
         secondary: cfg.secondary || '#3b82f6',
+        developer_name: cfg.developer_name || 'Giridharan',
+        portfolio_url: cfg.portfolio_url || '',
+        copyright_year: Number(cfg.copyright_year || new Date().getFullYear()),
+        maintenance_mode: Boolean(cfg.maintenance_mode),
+        maintenance_message: cfg.maintenance_message || 'We are performing scheduled maintenance. Please check back shortly.',
         total_views: Number(stats.total_views || 0),
       };
 

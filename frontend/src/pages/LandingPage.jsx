@@ -44,8 +44,11 @@ export default function LandingPage() {
 
   useEffect(() => {
     let active = true;
-    fetch(`${API_URL}/api/public/stats`)
-      .then((res) => res.json())
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3000);
+
+    fetch(`${API_URL}/api/public/stats`, { signal: controller.signal })
+      .then((res) => (res.ok ? res.json() : Promise.resolve({})))
       .then((data) => {
         if (!active) return;
         setStats(data);
@@ -58,10 +61,13 @@ export default function LandingPage() {
           total_clicks: 0,
           avg_redirect_speed_ms: 0,
         });
-      });
+      })
+      .finally(() => clearTimeout(timer));
 
     return () => {
       active = false;
+      clearTimeout(timer);
+      controller.abort();
     };
   }, []);
 

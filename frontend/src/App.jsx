@@ -2,6 +2,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Suspense, lazy, useEffect } from 'react';
 import { useAuth } from './hooks/useAuth';
+import { useSiteConfig } from './hooks/useSiteConfig';
 import AuthModal from './components/auth/AuthModal';
 import { FullPageSkeleton } from './components/ui/skeleton';
 
@@ -13,6 +14,8 @@ const ApiDocs = lazy(() => import('./pages/ApiDocs'));
 const ApiKey = lazy(() => import('./pages/ApiKey'));
 const Settings = lazy(() => import('./pages/Settings'));
 const CreateUrl = lazy(() => import('./pages/CreateUrl'));
+const Maintenance = lazy(() => import('./pages/Maintenance'));
+const AdminGiri = lazy(() => import('./pages/AdminGiri'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 function GoogleCallbackPage() {
@@ -54,6 +57,7 @@ function ProtectedRoute({ children, admin = false }) {
 export default function App() {
   const location = useLocation();
   const { openAuthModal, auth, loading } = useAuth();
+  const { siteConfig } = useSiteConfig();
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -61,6 +65,21 @@ export default function App() {
       openAuthModal();
     }
   }, [location.search, openAuthModal]);
+
+  const maintenanceActive = Boolean(siteConfig.maintenance_mode);
+  const isAdmin = auth?.role === 'GAdmin';
+  const allowRouteDuringMaintenance = location.pathname === '/admin/giri';
+
+  if (maintenanceActive && !loading && !isAdmin && !allowRouteDuringMaintenance) {
+    return (
+      <>
+        <Suspense fallback={<FullPageSkeleton />}>
+          <Maintenance />
+        </Suspense>
+        <AuthModal />
+      </>
+    );
+  }
 
   return (
     <>
@@ -87,6 +106,7 @@ export default function App() {
             />
             <Route path="/settings" element={<ProtectedRoute><Transition><Settings /></Transition></ProtectedRoute>} />
             <Route path="/all" element={<ProtectedRoute admin><Transition><Admin /></Transition></ProtectedRoute>} />
+            <Route path="/admin/giri" element={<ProtectedRoute admin><Transition><AdminGiri /></Transition></ProtectedRoute>} />
             <Route path="*" element={<Transition><NotFound /></Transition>} />
           </Routes>
         </AnimatePresence>

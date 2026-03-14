@@ -107,6 +107,7 @@ async function createShortUrl(fastify, payload, request, includeExpiry = true) {
 
 export default async function urlRoutes(fastify) {
   let expiryColumnAvailable = true;
+  const PUBLIC_STATS_CACHE_KEY = 'public:stats:v1';
 
   async function runWithExpiryFallback(withExpiryFn, withoutExpiryFn) {
     if (!expiryColumnAvailable) {
@@ -333,6 +334,16 @@ export default async function urlRoutes(fastify) {
   });
 
   fastify.get('/api/public/stats', async () => {
+    try {
+      const cached = await fastify.redis.get(PUBLIC_STATS_CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && typeof parsed === 'object') return parsed;
+      }
+    } catch {
+      // cache read is best effort
+    }
+
     const [totalUrls, totalClicks] = await Promise.all([
       fastify.prisma.url.count(),
       fastify.prisma.click.count(),
@@ -348,12 +359,20 @@ export default async function urlRoutes(fastify) {
       avgRedirectSpeedMs = 140;
     }
 
-    return {
+    const payload = {
       total_urls: totalUrls,
       total_clicks: totalClicks,
       total_views: totalClicks,
       avg_redirect_speed_ms: avgRedirectSpeedMs,
     };
+
+    try {
+      await fastify.redis.set(PUBLIC_STATS_CACHE_KEY, JSON.stringify(payload), 'EX', 2);
+    } catch {
+      // cache write is best effort
+    }
+
+    return payload;
   });
 
   fastify.delete('/api/url/:id', { preHandler: [fastify.requireAuth] }, async (request, reply) => {
@@ -446,6 +465,12 @@ export default async function urlRoutes(fastify) {
           country,
           referrer: referrer ? String(referrer) : null,
         },
+      }).then(async () => {
+        try {
+          await fastify.redis.del(PUBLIC_STATS_CACHE_KEY);
+        } catch {
+          // best effort cache invalidation
+        }
       }).catch((error) => {
         request.log.error({ error }, 'Failed to record click');
       });
