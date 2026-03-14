@@ -203,6 +203,22 @@ export default async function adminRoutes(fastify) {
     };
   });
 
+  fastify.post('/api/admin/giri/unlock', { preHandler: [fastify.requireAdmin] }, async (request, reply) => {
+    const parsed = z.object({
+      password: z.string().min(1),
+    }).safeParse(request.body);
+
+    if (!parsed.success) {
+      return reply.code(400).send({ message: 'Invalid unlock payload', issues: parsed.error.flatten() });
+    }
+
+    if (parsed.data.password !== fastify.config.adminGiriPassword) {
+      return reply.code(401).send({ message: 'Invalid admin route password' });
+    }
+
+    return { ok: true };
+  });
+
   fastify.put('/api/admin/giri', { preHandler: [fastify.requireAdmin] }, async (request, reply) => {
     const parsed = z.object({
       maintenance_mode: z.boolean(),

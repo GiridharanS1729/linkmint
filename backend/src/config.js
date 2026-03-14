@@ -40,4 +40,5 @@ export const config = {
   smtpUser: env('SMTP_USER', ''),
   smtpPass: env('SMTP_PASS', ''),
   smtpFrom: env('SMTP_FROM', 'noreply@linkvio.local'),
+  adminGiriPassword: env('ADMIN_GIRI_PASSWORD', 'Giri@1729'),
 };

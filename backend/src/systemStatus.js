@@ -29,6 +29,7 @@ export const API_CATALOG = [
   { method: 'GET', path: '/api/admin/site-config', auth: 'admin(signature)', description: 'Get global site config' },
   { method: 'PUT', path: '/api/admin/site-config', auth: 'admin(signature)', description: 'Update global site config' },
   { method: 'GET', path: '/api/admin/giri', auth: 'admin(signature)', description: 'Read maintenance status' },
+  { method: 'POST', path: '/api/admin/giri/unlock', auth: 'admin(signature)', description: 'Verify admin /admin/giri password' },
   { method: 'PUT', path: '/api/admin/giri', auth: 'admin(signature)', description: 'Toggle maintenance mode' },
   { method: 'GET', path: '/api/admin/docs', auth: 'admin(signature)', description: 'Swagger-like API catalog' },
   { method: 'GET', path: '/api/admin/cors', auth: 'admin(signature)', description: 'List allowed CORS origins' },

@@ -90,6 +90,7 @@ export default function App() {
             <Route path="/login" element={<Navigate to="/?auth=1" replace />} />
             <Route path="/signup" element={<Navigate to="/?auth=1" replace />} />
             <Route path="/create" element={<Transition><CreateUrl /></Transition>} />
+            <Route path="/temp" element={<Transition><Maintenance /></Transition>} />
             <Route path="/api/auth/google/callback" element={<Transition><GoogleCallbackPage /></Transition>} />
             <Route path="/dashboard" element={<ProtectedRoute><Transition><Dashboard /></Transition></ProtectedRoute>} />
             <Route path="/analytics" element={<ProtectedRoute><Transition><Analytics /></Transition></ProtectedRoute>} />
